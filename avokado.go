@@ -71,6 +71,7 @@ type config struct {
 	serverAPIprefix       string
 	serverVersion         string
 	healthzURL            string
+	sentryDSN             string
 	idleTimeout           time.Duration
 	readTimeout           time.Duration
 	writeTimeout          time.Duration
@@ -136,6 +137,17 @@ func WithServerVersion(serverVersion string) Option {
 func WithHealthzURL(healthzURL string) Option {
 	return func(c *config) error {
 		c.healthzURL = healthzURL
+
+		return nil
+	}
+}
+
+// WithSentryDSN enables Sentry integration with the given DSN.
+// When set, Sentry is initialized and the Sentry middleware is added
+// to the middleware chain.
+func WithSentryDSN(dsn string) Option {
+	return func(c *config) error {
+		c.sentryDSN = dsn
 
 		return nil
 	}
