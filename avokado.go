@@ -20,7 +20,7 @@ type Server struct {
 	config *config
 }
 
-// ListenAndServe starts fiber server with grafeful shutdown.
+// ListenAndServe starts fiber server with graceful shutdown.
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

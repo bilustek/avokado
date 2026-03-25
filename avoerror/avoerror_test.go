@@ -76,7 +76,7 @@ func TestErrorsAs_WorksForChainedErrors(t *testing.T) {
 
 	var target *avoerror.Error
 	if !errors.As(wrapped, &target) {
-		t.Fatal("errors.As should find *avokadoerror.Error in chain")
+		t.Fatal("errors.As should find *avoerror.Error in chain")
 	}
 
 	if target.Status != http.StatusNotFound {
