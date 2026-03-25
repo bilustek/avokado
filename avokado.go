@@ -44,7 +44,10 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return s.App.ShutdownWithContext(context.Background())
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.config.writeTimeout)
+		defer cancel()
+
+		return s.App.ShutdownWithContext(shutdownCtx)
 	case err := <-errCh:
 		return err
 	}
