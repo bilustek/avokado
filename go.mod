@@ -2,7 +2,10 @@ module github.com/bilustek/avokado
 
 go 1.26.1
 
-require github.com/gofiber/fiber/v3 v3.1.0
+require (
+	github.com/getsentry/sentry-go v0.44.1
+	github.com/gofiber/fiber/v3 v3.1.0
+)
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
@@ -18,6 +21,6 @@ require (
 	github.com/valyala/fasthttp v1.69.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/net v0.50.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )
