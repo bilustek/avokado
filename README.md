@@ -1,4 +1,10 @@
 ![Version](https://img.shields.io/badge/version-0.0.0-orange.svg)
+![Go](https://img.shields.io/github/go-mod/go-version/bilustek/avokado)
+[![Documentation](https://godoc.org/github.com/bilustek/avokado?status.svg)](https://pkg.go.dev/github.com/bilustek/avokado)
+![Go Build Status](https://github.com/bilustek/avokado/actions/workflows/go-lint.yml/badge.svg)
+![GolangCI-Lint Status](https://github.com/bilustek/avokado/actions/workflows/go-test.yml/badge.svg)
+[![codecov](https://codecov.io/github/bilustek/avokado/graph/badge.svg?token=4SKJU2QH42)](https://codecov.io/github/bilustek/avokado)
+
 
 # avokado
 
