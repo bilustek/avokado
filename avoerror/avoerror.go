@@ -11,7 +11,6 @@ const (
 	CodeNotFound        ErrorCode = "not-found"
 	CodeInternalError   ErrorCode = "internal-error"
 	CodeConflict        ErrorCode = "conflict"
-	CodeInvalid         ErrorCode = "invalid"
 	CodeInvalidParam    ErrorCode = "invalid-param"
 	CodeHTTPError       ErrorCode = "http-error"
 )

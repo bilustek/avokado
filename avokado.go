@@ -2,13 +2,14 @@ package avokado
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/bilustek/avokado/avoerror"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -156,11 +157,11 @@ func WithListenConfig(listenConfig *fiber.ListenConfig) Option {
 func WithIdleTimeout(d time.Duration) Option {
 	return func(c *config) error {
 		if d < 0 {
-			return errors.New("fix this")
-			// return fmt.Errorf(
-			// 	"[webhookserver.WithIdleTimeout] error: [%w, '%s' received, must > 0]",
-			// 	cerrors.ErrInvalid, d,
-			// )
+			return fmt.Errorf(
+				"%w '%s' received, must > 0",
+				avoerror.New("[avokado.WithIdleTimeout] err:").WithCode(avoerror.CodeInvalidParam),
+				d,
+			)
 		}
 		c.idleTimeout = d
 
@@ -172,11 +173,11 @@ func WithIdleTimeout(d time.Duration) Option {
 func WithReadTimeout(d time.Duration) Option {
 	return func(c *config) error {
 		if d < 0 {
-			return errors.New("fix this")
-			// return fmt.Errorf(
-			// 	"[webhookserver.WithReadTimeout] error: [%w, '%s' received, must > 0]",
-			// 	cerrors.ErrInvalid, d,
-			// )
+			return fmt.Errorf(
+				"%w, '%s' received, must > 0",
+				avoerror.New("[avokado.WithReadTimeout] err:").WithCode(avoerror.CodeInvalidParam),
+				d,
+			)
 		}
 
 		c.readTimeout = d
@@ -189,11 +190,11 @@ func WithReadTimeout(d time.Duration) Option {
 func WithWriteTimeout(d time.Duration) Option {
 	return func(c *config) error {
 		if d < 0 {
-			return errors.New("fix this")
-			// return fmt.Errorf(
-			// 	"[webhookserver.WithReadTimeout] error: [%w, '%s' received, must > 0]",
-			// 	cerrors.ErrInvalid, d,
-			// )
+			return fmt.Errorf(
+				"%w, '%s' received, must > 0",
+				avoerror.New("[avokado.WithWriteTimeout] err:").WithCode(avoerror.CodeInvalidParam),
+				d,
+			)
 		}
 
 		c.writeTimeout = d
