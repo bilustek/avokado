@@ -33,6 +33,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 			"addr", s.config.listenAddr,
 			"name", s.config.serverName,
 			"version", s.config.serverVersion,
+			"avokado_version", Version,
 			"sentry_enabled", avologger.IsSentryEnabled(s.config.logger),
 		)
 		if s.config.listenConfig != nil {
@@ -46,7 +47,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.config.writeTimeout)
 		defer cancel()
-
+		s.config.logger.Info("shutting down")
 		return s.App.ShutdownWithContext(shutdownCtx)
 	case err := <-errCh:
 		return err
@@ -285,8 +286,9 @@ type healthzHTTPHandlerArgs struct {
 func healthzHandler(args *healthzHTTPHandlerArgs) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
-			"name":    args.serverName,
-			"version": args.baseArgs.serverVersion,
+			"name":            args.serverName,
+			"version":         args.baseArgs.serverVersion,
+			"avokado_version": Version,
 		})
 	}
 }

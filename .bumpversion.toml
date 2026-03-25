@@ -23,3 +23,6 @@ allow_shell_hooks = true
 
 [[tool.bumpversion.files]]
 filename = "README.md"
+
+[[tool.bumpversion.files]]
+filename = "avokadoversion.go"
