@@ -1,6 +1,7 @@
 package avokado_test
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -278,5 +279,41 @@ func TestHealthzEndpoint_CustomURL(t *testing.T) {
 
 	if body["name"] != "custom-healthz" {
 		t.Errorf("expected name 'custom-healthz', got %q", body["name"])
+	}
+}
+
+func TestListenAndServe_GracefulShutdown(t *testing.T) {
+	t.Parallel()
+
+	server, err := avokado.New(
+		avokado.WithServerName("shutdown-test"),
+		avokado.WithListenAddr(":0"),
+		avokado.WithLogger(slog.New(slog.NewJSONHandler(io.Discard, nil))),
+	)
+	if err != nil {
+		t.Fatalf("avokado.New error: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- server.ListenAndServe(ctx)
+	}()
+
+	// give server time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// trigger graceful shutdown
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("expected nil error from graceful shutdown, got: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("graceful shutdown timed out")
 	}
 }
