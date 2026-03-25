@@ -106,6 +106,14 @@ func initSentry(dsn string) error {
 	})
 }
 
+// IsSentryEnabled checks if the given logger has Sentry integration enabled
+// by inspecting its handler chain for a SentryHandler.
+func IsSentryEnabled(logger *slog.Logger) bool {
+	_, ok := logger.Handler().(*SentryHandler)
+
+	return ok
+}
+
 // slogLevelToSentry converts slog.Level to sentry.Level.
 func slogLevelToSentry(level slog.Level) sentry.Level {
 	switch {

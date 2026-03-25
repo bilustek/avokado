@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bilustek/avokado/avoerror"
+	"github.com/bilustek/avokado/avologger"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -32,6 +33,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 			"addr", s.config.listenAddr,
 			"name", s.config.serverName,
 			"version", s.config.serverVersion,
+			"sentry_enabled", avologger.IsSentryEnabled(s.config.logger),
 		)
 		if s.config.listenConfig != nil {
 			errCh <- s.App.Listen(s.config.listenAddr, *s.config.listenConfig)
