@@ -241,9 +241,13 @@ func CustomValidationMessage(fe validator.FieldError) string {
 	case "email":
 		return sqValue + " is not a valid email for " + sqField + " field"
 	case "max":
-		return sqValue + " length is greater than " + param + " for " + sqField + "field"
+		return sqValue + " length is greater than " + param + " for " + sqField + " field"
 	case "min":
-		return sqValue + " length is less than " + param + " for " + sqField + "field"
+		return sqValue + " length is less than " + param + " for " + sqField + " field"
+	case "timezone":
+		return sqValue + " is not a valid timezone for " + sqField + " field"
+	case "bcp47_language_tag":
+		return sqValue + " is not a valid language identifier " + sqField + " field"
 	}
-	return sqFieldTag + " validation error, " + sqValue + " is invalid for " + sqField + "field"
+	return sqFieldTag + " validation error, " + sqValue + " is invalid for " + sqField + " field"
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/bilustek/avokado/avoerror"
 	"github.com/bilustek/avokado/avoresponse"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
@@ -1095,4 +1096,82 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 		t.Error("expected WARN level in log output")
 	}
 	fmt.Println(logOutput)
+}
+
+// mockFieldError implements validator.FieldError for unit testing CustomValidationMessage.
+type mockFieldError struct {
+	tag   string
+	field string
+	param string
+	value interface{}
+}
+
+func (m mockFieldError) Tag() string            { return m.tag }
+func (m mockFieldError) ActualTag() string       { return m.tag }
+func (m mockFieldError) Namespace() string       { return "" }
+func (m mockFieldError) StructNamespace() string { return "" }
+func (m mockFieldError) Field() string           { return m.field }
+func (m mockFieldError) StructField() string     { return m.field }
+func (m mockFieldError) Value() interface{}      { return m.value }
+func (m mockFieldError) Param() string           { return m.param }
+func (m mockFieldError) Kind() reflect.Kind      { return reflect.String }
+func (m mockFieldError) Type() reflect.Type      { return reflect.TypeOf("") }
+func (m mockFieldError) Translate(_ ut.Translator) string { return "" }
+func (m mockFieldError) Error() string           { return m.tag }
+
+func TestCustomValidationMessage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		fe       mockFieldError
+		expected string
+	}{
+		{
+			name:     "required tag",
+			fe:       mockFieldError{tag: "required", field: "name", value: ""},
+			expected: "'name' field is required, value can not be empty!",
+		},
+		{
+			name:     "email tag",
+			fe:       mockFieldError{tag: "email", field: "email", value: "bad"},
+			expected: "'bad' is not a valid email for 'email' field",
+		},
+		{
+			name:     "max tag",
+			fe:       mockFieldError{tag: "max", field: "passwd", param: "4", value: "toolongvalue"},
+			expected: "'toolongvalue' length is greater than 4 for 'passwd' field",
+		},
+		{
+			name:     "min tag",
+			fe:       mockFieldError{tag: "min", field: "passwd", param: "2", value: "1"},
+			expected: "'1' length is less than 2 for 'passwd' field",
+		},
+		{
+			name:     "timezone tag",
+			fe:       mockFieldError{tag: "timezone", field: "tz", value: "Mars/Olympus"},
+			expected: "'Mars/Olympus' is not a valid timezone for 'tz' field",
+		},
+		{
+			name:     "bcp47_language_tag tag",
+			fe:       mockFieldError{tag: "bcp47_language_tag", field: "lang", value: "xyz!!!"},
+			expected: "'xyz!!!' is not a valid language identifier 'lang' field",
+		},
+		{
+			name:     "unknown tag falls to default",
+			fe:       mockFieldError{tag: "oneof", field: "status", value: "nope"},
+			expected: "'oneof' validation error, 'nope' is invalid for 'status' field",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := avoresponse.CustomValidationMessage(tt.fe)
+			if got != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, got)
+			}
+		})
+	}
 }
