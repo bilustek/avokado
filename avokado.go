@@ -68,21 +68,22 @@ const (
 type Option func(*config) error
 
 type config struct {
-	logger                *slog.Logger
-	serverName            string
-	listenAddr            string
-	serverEnvironmentName string
-	serverAPIprefix       string
-	serverVersion         string
-	healthzURL            string
-	sentryDSN             string
-	idleTimeout           time.Duration
-	readTimeout           time.Duration
-	writeTimeout          time.Duration
-	fiberConfig           *fiber.Config
-	listenConfig          *fiber.ListenConfig
-	logClientErrors       bool
-	structValidator       fiber.StructValidator
+	logger                      *slog.Logger
+	serverName                  string
+	listenAddr                  string
+	serverEnvironmentName       string
+	serverAPIprefix             string
+	serverVersion               string
+	healthzURL                  string
+	sentryDSN                   string
+	idleTimeout                 time.Duration
+	readTimeout                 time.Duration
+	writeTimeout                time.Duration
+	fiberConfig                 *fiber.Config
+	listenConfig                *fiber.ListenConfig
+	logClientErrors             bool
+	structValidator             fiber.StructValidator
+	customValidationMessageFunc avoresponse.ValidationMessageFunc
 }
 
 // WithLogger sets the logger.
@@ -246,6 +247,16 @@ func WithWriteTimeout(d time.Duration) Option {
 	}
 }
 
+// WithCustomValidationMessageFunc sets a custom function for generating validation error messages.
+func WithCustomValidationMessageFunc(fnc avoresponse.ValidationMessageFunc) Option {
+	return func(c *config) error {
+		if fnc != nil {
+			c.customValidationMessageFunc = fnc
+		}
+		return nil
+	}
+}
+
 // New creates a new Fiber v3 application.
 func New(opts ...Option) (*Server, error) {
 	cfg := &config{}
@@ -305,14 +316,18 @@ func New(opts ...Option) (*Server, error) {
 		})
 		cfg.structValidator = &defaultStructValidator{validate: v}
 	}
+	if cfg.customValidationMessageFunc == nil {
+		cfg.customValidationMessageFunc = avoresponse.CustomValidationMessage
+	}
 
 	fiberCfg := *cfg.fiberConfig
 	fiberCfg.AppName = cfg.serverName
 	fiberCfg.StructValidator = cfg.structValidator
 
 	errorHandlerArgs := &avoresponse.ErrorHTTPHandlerArgs{
-		Logger:          cfg.logger,
-		LogClientErrors: cfg.logClientErrors,
+		Logger:                cfg.logger,
+		LogClientErrors:       cfg.logClientErrors,
+		ValidationMessageFunc: cfg.customValidationMessageFunc,
 	}
 	fiberCfg.ErrorHandler = avoresponse.NewErrorHandler(errorHandlerArgs)
 

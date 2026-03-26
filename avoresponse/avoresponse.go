@@ -95,6 +95,9 @@ func OKWithPagination[T any](c fiber.Ctx, data T, params PaginationParams) error
 	})
 }
 
+// ValidationMessageFunc is a function type that converts a validator.FieldError into a human-readable message.
+type ValidationMessageFunc func(validator.FieldError) string
+
 // BuildMeta creates a Meta struct from pagination parameters.
 // HasNext is true when page*perPage < totalCount (more items exist).
 // HasPrevious is true when page > 1.
@@ -130,14 +133,19 @@ func BuildLinks(baseURL string, page, perPage, totalCount int) *Links {
 
 // ErrorHTTPHandlerArgs represents error http handler args.
 type ErrorHTTPHandlerArgs struct {
-	Logger          *slog.Logger
-	LogClientErrors bool
+	Logger                *slog.Logger
+	LogClientErrors       bool
+	ValidationMessageFunc ValidationMessageFunc
 }
 
 // NewErrorHandler creates a Fiber ErrorHandler that converts errors into
 // unified ErrorResponse format. The logger parameter is optional (can be nil).
 // Logger behavior: 5xx errors logged at Error level, 4xx at Warn level.
 func NewErrorHandler(args *ErrorHTTPHandlerArgs) fiber.ErrorHandler {
+	if args.ValidationMessageFunc == nil {
+		args.ValidationMessageFunc = CustomValidationMessage
+	}
+
 	return func(c fiber.Ctx, err error) error {
 		if err == nil {
 			return Fail(c, fiber.StatusInternalServerError,
@@ -148,7 +156,7 @@ func NewErrorHandler(args *ErrorHTTPHandlerArgs) fiber.ErrorHandler {
 			)
 		}
 
-		status, items := classifyError(err)
+		status, items := classifyError(err, args.ValidationMessageFunc)
 
 		logger := args.Logger
 		if logger != nil {
@@ -163,7 +171,7 @@ func NewErrorHandler(args *ErrorHTTPHandlerArgs) fiber.ErrorHandler {
 	}
 }
 
-func classifyError(err error) (int, []ErrorItem) {
+func classifyError(err error, vldMsgFunc ValidationMessageFunc) (int, []ErrorItem) {
 	var fiberErr *fiber.Error
 	if errors.As(err, &fiberErr) {
 		return fiberErr.Code, []ErrorItem{
@@ -180,7 +188,7 @@ func classifyError(err error) (int, []ErrorItem) {
 		for _, fe := range validErrs {
 			items = append(items, ErrorItem{
 				Code:    string(avoerror.CodeValidationError),
-				Message: validationMessage(fe),
+				Message: vldMsgFunc(fe),
 			})
 		}
 
@@ -214,7 +222,8 @@ func singleQuote(s string) string {
 	return "'" + s + "'"
 }
 
-func validationMessage(fe validator.FieldError) string {
+// CustomValidationMessage returns a human-readable validation error message for the given field error.
+func CustomValidationMessage(fe validator.FieldError) string {
 	value := fmt.Sprintf("%v", fe.Value())
 	sqValue := singleQuote(value)
 

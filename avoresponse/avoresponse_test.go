@@ -1066,6 +1066,23 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
+	respBody, _ := io.ReadAll(resp.Body)
+
+	var result avoresponse.ErrorResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	if len(result.Errors) == 0 {
+		t.Fatal("expected validation errors, got none")
+	}
+
+	for _, item := range result.Errors {
+		if item.Code != string(avoerror.CodeValidationError) {
+			t.Errorf("expected code %q, got %q", avoerror.CodeValidationError, item.Code)
+		}
+	}
+
 	if resp.StatusCode != fiber.StatusUnprocessableEntity {
 		t.Errorf("expected status %d, got %d", fiber.StatusUnprocessableEntity, resp.StatusCode)
 	}
