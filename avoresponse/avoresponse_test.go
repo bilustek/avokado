@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bilustek/avokado/avoerror"
 	"github.com/bilustek/avokado/avoresponse"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -945,4 +949,134 @@ func TestErrorHandler_WithLogger_ClientError_LogEnabled(t *testing.T) {
 	if !contains(logOutput, "WARN") {
 		t.Error("expected WARN level in log output")
 	}
+}
+
+type testStructValidator struct {
+	validate *validator.Validate
+}
+
+func newTestStructValidator() *testStructValidator {
+	v := validator.New()
+	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
+		if name == "-" {
+			return ""
+		}
+
+		return name
+	})
+
+	return &testStructValidator{validate: v}
+}
+
+func (v *testStructValidator) Validate(out any) error {
+	return v.validate.Struct(out)
+}
+
+type testValidationPayload struct {
+	Name  string `json:"name"  validate:"required"`
+	Email string `json:"email" validate:"required,email"`
+}
+
+func TestErrorHandler_ValidationError(t *testing.T) {
+	t.Parallel()
+
+	sv := newTestStructValidator()
+
+	app := fiber.New(fiber.Config{
+		StructValidator: sv,
+		ErrorHandler:    avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+	})
+
+	app.Post("/test", func(c fiber.Ctx) error {
+		var payload testValidationPayload
+		if err := c.Bind().Body(&payload); err != nil {
+			return err
+		}
+
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	body := bytes.NewBufferString(`{"name":"","email":"bad"}`)
+	req := httptest.NewRequest("POST", "/test", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusUnprocessableEntity {
+		t.Errorf("expected status %d, got %d", fiber.StatusUnprocessableEntity, resp.StatusCode)
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	var result avoresponse.ErrorResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	if len(result.Errors) == 0 {
+		t.Fatal("expected validation errors, got none")
+	}
+
+	for _, item := range result.Errors {
+		if item.Code != string(avoerror.CodeValidationError) {
+			t.Errorf("expected code %q, got %q", avoerror.CodeValidationError, item.Code)
+		}
+	}
+}
+
+func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+
+	sv := newTestStructValidator()
+
+	app := fiber.New(fiber.Config{
+		StructValidator: sv,
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+			Logger:          logger,
+			LogClientErrors: true,
+		}),
+	})
+
+	app.Post("/test", func(c fiber.Ctx) error {
+		var payload testValidationPayload
+		if err := c.Bind().Body(&payload); err != nil {
+			return err
+		}
+
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	body := bytes.NewBufferString(`{"name":"","email":"bad"}`)
+	req := httptest.NewRequest("POST", "/test", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	fmt.Println("response:", string(respBody))
+
+	if resp.StatusCode != fiber.StatusUnprocessableEntity {
+		t.Errorf("expected status %d, got %d", fiber.StatusUnprocessableEntity, resp.StatusCode)
+	}
+
+	logOutput := buf.String()
+	if !contains(logOutput, "client error") {
+		t.Error("expected 'client error' in log output")
+	}
+	if !contains(logOutput, "WARN") {
+		t.Error("expected WARN level in log output")
+	}
+	fmt.Println(logOutput)
 }

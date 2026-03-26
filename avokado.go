@@ -6,12 +6,15 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"reflect"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bilustek/avokado/avoerror"
 	"github.com/bilustek/avokado/avologger"
 	"github.com/bilustek/avokado/avoresponse"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -79,6 +82,7 @@ type config struct {
 	fiberConfig           *fiber.Config
 	listenConfig          *fiber.ListenConfig
 	logClientErrors       bool
+	structValidator       fiber.StructValidator
 }
 
 // WithLogger sets the logger.
@@ -182,6 +186,16 @@ func WithLogClientErrors(enabled bool) Option {
 	}
 }
 
+// WithStructValidator sets a custom struct validator for Fiber's request binding.
+// If not set, a default go-playground/validator instance is used.
+func WithStructValidator(sv fiber.StructValidator) Option {
+	return func(c *config) error {
+		c.structValidator = sv
+
+		return nil
+	}
+}
+
 // WithIdleTimeout sets the fiber server's idle timeout.
 func WithIdleTimeout(d time.Duration) Option {
 	return func(c *config) error {
@@ -279,8 +293,22 @@ func New(opts ...Option) (*Server, error) {
 		cfg.fiberConfig = &fiber.Config{}
 	}
 
+	if cfg.structValidator == nil {
+		v := validator.New()
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
+			if name == "-" {
+				return ""
+			}
+
+			return name
+		})
+		cfg.structValidator = &defaultStructValidator{validate: v}
+	}
+
 	fiberCfg := *cfg.fiberConfig
 	fiberCfg.AppName = cfg.serverName
+	fiberCfg.StructValidator = cfg.structValidator
 
 	errorHandlerArgs := &avoresponse.ErrorHTTPHandlerArgs{
 		Logger:          cfg.logger,
@@ -311,6 +339,14 @@ type BaseHTTPHandlerArgs struct {
 type healthzHTTPHandlerArgs struct {
 	baseArgs   BaseHTTPHandlerArgs
 	serverName string
+}
+
+type defaultStructValidator struct {
+	validate *validator.Validate
+}
+
+func (v *defaultStructValidator) Validate(out any) error {
+	return v.validate.Struct(out)
 }
 
 func healthzHandler(args *healthzHTTPHandlerArgs) fiber.Handler {

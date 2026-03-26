@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/bilustek/avokado/avoerror"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -173,6 +174,19 @@ func classifyError(err error) (int, []ErrorItem) {
 		}
 	}
 
+	var validErrs validator.ValidationErrors
+	if errors.As(err, &validErrs) {
+		items := make([]ErrorItem, 0, len(validErrs))
+		for _, fe := range validErrs {
+			items = append(items, ErrorItem{
+				Code:    string(avoerror.CodeValidationError),
+				Message: validationMessage(fe),
+			})
+		}
+
+		return fiber.StatusUnprocessableEntity, items
+	}
+
 	var appErr *avoerror.Error
 	if errors.As(err, &appErr) {
 		status := appErr.Status
@@ -194,4 +208,33 @@ func classifyError(err error) (int, []ErrorItem) {
 			Message: "internal server error",
 		},
 	}
+}
+
+func validationMessage(fe validator.FieldError) string {
+	value := fmt.Sprintf("%v", fe.Value())
+
+	field := fe.Field()
+	tag := fe.Tag()
+	// param := fe.Param()
+
+	switch tag {
+	case "required":
+		return "'" + field + "' field is required"
+	case "email":
+		return "'" + value + "' is not a valid email for '" + field + "' field"
+	}
+	return tag
+
+	//
+	// if param != "" {
+	// 	return fmt.Sprintf(
+	// 		"field validation for '%s' failed on the '%s' tag (param: %s)",
+	// 		field, tag, param,
+	// 	)
+	// }
+	//
+	// return fmt.Sprintf(
+	// 	"field validation for '%s' failed on the '%s' tag",
+	// 	field, tag,
+	// )
 }
