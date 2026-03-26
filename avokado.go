@@ -284,14 +284,15 @@ func New(opts ...Option) (*Server, error) {
 	return &Server{App: app, config: cfg}, nil
 }
 
-type baseHTTPHandlerArgs struct {
+// BaseHTTPHandlerArgs represents common http handler args.
+type BaseHTTPHandlerArgs struct {
 	logger                *slog.Logger
 	serverEnvironmentName string
 	serverVersion         string
 }
 
 type healthzHTTPHandlerArgs struct {
-	baseArgs   baseHTTPHandlerArgs
+	baseArgs   BaseHTTPHandlerArgs
 	serverName string
 }
 
