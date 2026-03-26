@@ -1,4 +1,4 @@
-package avodb_test
+package avokadodb_test
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bilustek/avokado/avodb"
 	"github.com/bilustek/avokado/avoerror"
+	"github.com/bilustek/avokado/avokadodb"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -21,7 +21,7 @@ func TestWithDatabaseURL(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		t.Parallel()
 
-		if _, err := avodb.New(avodb.WithDatabaseURL("")); err == nil {
+		if _, err := avokadodb.New(avokadodb.WithDatabaseURL("")); err == nil {
 			t.Fatal("expected error for empty URL")
 		}
 	})
@@ -47,9 +47,9 @@ func TestWithMaxOpenConns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := avodb.New(
-				avodb.WithDatabaseURL(testDSN),
-				avodb.WithMaxOpenConns(tt.value),
+			_, err := avokadodb.New(
+				avokadodb.WithDatabaseURL(testDSN),
+				avokadodb.WithMaxOpenConns(tt.value),
 			)
 			if tt.wantErr && err == nil {
 				t.Errorf("WithMaxOpenConns(%d) expected error", tt.value)
@@ -81,9 +81,9 @@ func TestWithMaxIdleConns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := avodb.New(
-				avodb.WithDatabaseURL(testDSN),
-				avodb.WithMaxIdleConns(tt.value),
+			_, err := avokadodb.New(
+				avokadodb.WithDatabaseURL(testDSN),
+				avokadodb.WithMaxIdleConns(tt.value),
 			)
 			if tt.wantErr && err == nil {
 				t.Errorf("WithMaxIdleConns(%d) expected error", tt.value)
@@ -114,9 +114,9 @@ func TestWithConnMaxLifetime(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := avodb.New(
-				avodb.WithDatabaseURL(testDSN),
-				avodb.WithConnMaxLifetime(tt.value),
+			_, err := avokadodb.New(
+				avokadodb.WithDatabaseURL(testDSN),
+				avokadodb.WithConnMaxLifetime(tt.value),
 			)
 			if tt.wantErr && err == nil {
 				t.Errorf("WithConnMaxLifetime(%s) expected error", tt.value)
@@ -147,9 +147,9 @@ func TestWithConnMaxIdleTime(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := avodb.New(
-				avodb.WithDatabaseURL(testDSN),
-				avodb.WithConnMaxIdleTime(tt.value),
+			_, err := avokadodb.New(
+				avokadodb.WithDatabaseURL(testDSN),
+				avokadodb.WithConnMaxIdleTime(tt.value),
 			)
 			if tt.wantErr && err == nil {
 				t.Errorf("WithConnMaxIdleTime(%s) expected error", tt.value)
@@ -180,9 +180,9 @@ func TestWithPingTimeout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := avodb.New(
-				avodb.WithDatabaseURL(testDSN),
-				avodb.WithPingTimeout(tt.value),
+			_, err := avokadodb.New(
+				avokadodb.WithDatabaseURL(testDSN),
+				avokadodb.WithPingTimeout(tt.value),
 			)
 			if tt.wantErr && err == nil {
 				t.Errorf("WithPingTimeout(%s) expected error", tt.value)
@@ -199,9 +199,9 @@ func TestWithLogger(t *testing.T) {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	if _, err := avodb.New(
-		avodb.WithDatabaseURL(testDSN),
-		avodb.WithLogger(logger),
+	if _, err := avokadodb.New(
+		avokadodb.WithDatabaseURL(testDSN),
+		avokadodb.WithLogger(logger),
 	); err != nil && isOptionError(err) {
 		t.Fatalf("unexpected option error: %v", err)
 	}
@@ -213,9 +213,9 @@ func TestWithGormConfig(t *testing.T) {
 	t.Run("with_config", func(t *testing.T) {
 		t.Parallel()
 
-		if _, err := avodb.New(
-			avodb.WithDatabaseURL(testDSN),
-			avodb.WithGormConfig(&gorm.Config{}),
+		if _, err := avokadodb.New(
+			avokadodb.WithDatabaseURL(testDSN),
+			avokadodb.WithGormConfig(&gorm.Config{}),
 		); err != nil && isOptionError(err) {
 			t.Fatalf("unexpected option error: %v", err)
 		}
@@ -224,9 +224,9 @@ func TestWithGormConfig(t *testing.T) {
 	t.Run("nil_config", func(t *testing.T) {
 		t.Parallel()
 
-		if _, err := avodb.New(
-			avodb.WithDatabaseURL(testDSN),
-			avodb.WithGormConfig(nil),
+		if _, err := avokadodb.New(
+			avokadodb.WithDatabaseURL(testDSN),
+			avokadodb.WithGormConfig(nil),
 		); err != nil && isOptionError(err) {
 			t.Fatalf("unexpected option error: %v", err)
 		}
@@ -253,9 +253,9 @@ func TestWithGormLogLevel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := avodb.New(
-				avodb.WithDatabaseURL(testDSN),
-				avodb.WithGormLogLevel(tt.value),
+			_, err := avokadodb.New(
+				avokadodb.WithDatabaseURL(testDSN),
+				avokadodb.WithGormLogLevel(tt.value),
 			)
 			if tt.wantErr && err == nil {
 				t.Errorf("WithGormLogLevel(%d) expected error", tt.value)
@@ -270,7 +270,7 @@ func TestWithGormLogLevel(t *testing.T) {
 func TestNew_NoDatabaseURL(t *testing.T) {
 	t.Parallel()
 
-	if _, err := avodb.New(); err == nil {
+	if _, err := avokadodb.New(); err == nil {
 		t.Fatal("expected error for missing database URL")
 	}
 }
@@ -278,9 +278,9 @@ func TestNew_NoDatabaseURL(t *testing.T) {
 func TestNew_OptionError(t *testing.T) {
 	t.Parallel()
 
-	if _, err := avodb.New(
-		avodb.WithDatabaseURL(testDSN),
-		avodb.WithMaxOpenConns(-1),
+	if _, err := avokadodb.New(
+		avokadodb.WithDatabaseURL(testDSN),
+		avokadodb.WithMaxOpenConns(-1),
 	); err == nil {
 		t.Fatal("expected error from invalid option")
 	}
