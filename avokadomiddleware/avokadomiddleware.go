@@ -1,7 +1,7 @@
 // Package avomiddleware provides HTTP middleware for the avokado framework.
 // It includes security headers, Sentry panic recovery, CORS, and client-type
 // detection middleware. All middleware follows the Fiber v3 Handler signature.
-package avomiddleware
+package avokadomiddleware
 
 // Locals keys for storing middleware data in Fiber context.
 const (

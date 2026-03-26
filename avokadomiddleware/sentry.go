@@ -1,4 +1,4 @@
-package avomiddleware
+package avokadomiddleware
 
 import (
 	"errors"

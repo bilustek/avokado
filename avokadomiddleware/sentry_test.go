@@ -1,11 +1,11 @@
-package avomiddleware_test
+package avokadomiddleware_test
 
 import (
 	"errors"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bilustek/avokado/avomiddleware"
+	"github.com/bilustek/avokado/avokadomiddleware"
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v3"
 )
@@ -16,7 +16,7 @@ func TestNewSentry_SetsHubOnContext(t *testing.T) {
 	_ = sentry.Init(sentry.ClientOptions{Dsn: ""})
 
 	app := fiber.New()
-	app.Use(avomiddleware.NewSentry())
+	app.Use(avokadomiddleware.NewSentry())
 
 	var hubFound bool
 
@@ -46,7 +46,7 @@ func TestNewSentry_RecoverFromPanic(t *testing.T) {
 	_ = sentry.Init(sentry.ClientOptions{Dsn: ""})
 
 	app := fiber.New()
-	app.Use(avomiddleware.NewSentry())
+	app.Use(avokadomiddleware.NewSentry())
 	app.Get("/panic", func(_ fiber.Ctx) error {
 		panic("test panic")
 	})
@@ -71,7 +71,7 @@ func TestNewSentry_PanicReturnsSentryHandledError(t *testing.T) {
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(_ fiber.Ctx, err error) error {
-			if !avomiddleware.IsSentryHandled(err) {
+			if !avokadomiddleware.IsSentryHandled(err) {
 				t.Error("expected error to be sentry-handled, got regular error")
 			}
 
@@ -84,7 +84,7 @@ func TestNewSentry_PanicReturnsSentryHandledError(t *testing.T) {
 			return nil
 		},
 	})
-	app.Use(avomiddleware.NewSentry())
+	app.Use(avokadomiddleware.NewSentry())
 	app.Get("/panic", func(_ fiber.Ctx) error {
 		panic("sentry test panic")
 	})
@@ -104,12 +104,12 @@ func TestNewSentry_HubInLocals(t *testing.T) {
 	_ = sentry.Init(sentry.ClientOptions{Dsn: ""})
 
 	app := fiber.New()
-	app.Use(avomiddleware.NewSentry())
+	app.Use(avokadomiddleware.NewSentry())
 
 	var hubFound bool
 
 	app.Get("/test", func(c fiber.Ctx) error {
-		val := c.Locals(avomiddleware.LocalsSentryHub)
+		val := c.Locals(avokadomiddleware.LocalsSentryHub)
 		_, ok := val.(*sentry.Hub)
 		hubFound = ok
 
