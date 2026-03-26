@@ -3,10 +3,10 @@ package avoerror_test
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/bilustek/avokado/avoerror"
+	"github.com/gofiber/fiber/v3"
 )
 
 func TestNew_ReturnsErrorWithMessage(t *testing.T) {
@@ -30,13 +30,13 @@ func TestFluentBuilder_ReturnsSamePointer(t *testing.T) {
 	t.Parallel()
 
 	err := avoerror.New("not found")
-	result := err.WithStatus(http.StatusNotFound).WithCode(avoerror.CodeNotFound)
+	result := err.WithStatus(fiber.StatusNotFound).WithCode(avoerror.CodeNotFound)
 
 	if result != err {
 		t.Error("fluent builder should return the same pointer")
 	}
 
-	if result.Status != http.StatusNotFound {
+	if result.Status != fiber.StatusNotFound {
 		t.Errorf("expected Status 404, got %d", result.Status)
 	}
 
@@ -71,7 +71,7 @@ func TestUnwrap_ReturnsInnerError(t *testing.T) {
 func TestErrorsAs_WorksForChainedErrors(t *testing.T) {
 	t.Parallel()
 
-	appErr := avoerror.New("not found").WithStatus(http.StatusNotFound).WithCode(avoerror.CodeNotFound)
+	appErr := avoerror.New("not found").WithStatus(fiber.StatusNotFound).WithCode(avoerror.CodeNotFound)
 	wrapped := fmt.Errorf("handler error: %w", appErr)
 
 	var target *avoerror.Error
@@ -79,8 +79,8 @@ func TestErrorsAs_WorksForChainedErrors(t *testing.T) {
 		t.Fatal("errors.As should find *avoerror.Error in chain")
 	}
 
-	if target.Status != http.StatusNotFound {
-		t.Errorf("expected Status %d, got %d", http.StatusNotFound, target.Status)
+	if target.Status != fiber.StatusNotFound {
+		t.Errorf("expected Status %d, got %d", fiber.StatusNotFound, target.Status)
 	}
 }
 
@@ -130,7 +130,7 @@ func TestError_JSONTags(t *testing.T) {
 	t.Parallel()
 
 	// Verify struct has proper json tags by creating and checking fields
-	err := avoerror.New("test").WithStatus(http.StatusBadRequest).WithCode(avoerror.CodeValidationError)
+	err := avoerror.New("test").WithStatus(fiber.StatusBadRequest).WithCode(avoerror.CodeValidationError)
 	if err.Message != "test" {
 		t.Error("Message field should be accessible")
 	}

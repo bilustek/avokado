@@ -1,8 +1,11 @@
 package avoresponse
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 
+	"github.com/bilustek/avokado/avoerror"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -122,4 +125,70 @@ func BuildLinks(baseURL string, page, perPage, totalCount int) *Links {
 	}
 
 	return links
+}
+
+// NewErrorHandler creates a Fiber ErrorHandler that converts errors into
+// unified ErrorResponse format. The logger parameter is optional (can be nil).
+// Logger behavior: 5xx errors logged at Error level, 4xx at Warn level.
+func NewErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
+	return func(c fiber.Ctx, err error) error {
+		if err == nil {
+			return Fail(c, fiber.StatusInternalServerError,
+				ErrorItem{
+					Code:    string(avoerror.CodeInternalError),
+					Message: "Internal Server Error",
+				},
+			)
+		}
+
+		status, items := classifyError(err)
+
+		if logger != nil {
+			logError(logger, status, err)
+		}
+
+		return Fail(c, status, items...)
+	}
+}
+
+func classifyError(err error) (int, []ErrorItem) {
+	var fiberErr *fiber.Error
+	if errors.As(err, &fiberErr) {
+		return fiberErr.Code, []ErrorItem{
+			{
+				Code:    string(avoerror.CodeHTTPError),
+				Message: fiberErr.Message,
+			},
+		}
+	}
+
+	var appErr *avoerror.Error
+	if errors.As(err, &appErr) {
+		status := appErr.Status
+		if status == 0 {
+			status = fiber.StatusInternalServerError
+		}
+
+		return status, []ErrorItem{
+			{
+				Code:    string(appErr.Code),
+				Message: appErr.Message,
+			},
+		}
+	}
+
+	return fiber.StatusInternalServerError, []ErrorItem{
+		{
+			Code:    string(avoerror.CodeInternalError),
+			Message: "Internal Server Error",
+		},
+	}
+}
+
+func logError(logger *slog.Logger, status int, err error) {
+	if status >= fiber.StatusInternalServerError {
+		logger.Error("server error", slog.Int("status", status), slog.String("error", err.Error()))
+	} else {
+		logger.Warn("client error", slog.Int("status", status), slog.String("error", err.Error()))
+	}
 }

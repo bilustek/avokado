@@ -2,7 +2,6 @@ package avomiddleware_test
 
 import (
 	"errors"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -28,7 +27,7 @@ func TestNewSentry_SetsHubOnContext(t *testing.T) {
 		return c.SendString("ok")
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(fiber.MethodGet, "/test", nil)
 
 	resp, err := app.Test(req)
 	if err != nil {
@@ -52,7 +51,7 @@ func TestNewSentry_RecoverFromPanic(t *testing.T) {
 		panic("test panic")
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	req := httptest.NewRequest(fiber.MethodGet, "/panic", nil)
 
 	resp, err := app.Test(req)
 	if err != nil {
@@ -60,7 +59,7 @@ func TestNewSentry_RecoverFromPanic(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == fiber.StatusOK {
 		t.Error("expected non-200 status after panic, got 200")
 	}
 }
@@ -90,7 +89,7 @@ func TestNewSentry_PanicReturnsSentryHandledError(t *testing.T) {
 		panic("sentry test panic")
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	req := httptest.NewRequest(fiber.MethodGet, "/panic", nil)
 
 	resp, err := app.Test(req)
 	if err != nil {
@@ -117,7 +116,7 @@ func TestNewSentry_HubInLocals(t *testing.T) {
 		return c.SendString("ok")
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(fiber.MethodGet, "/test", nil)
 
 	resp, err := app.Test(req)
 	if err != nil {
