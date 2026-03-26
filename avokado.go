@@ -13,7 +13,7 @@ import (
 
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadologger"
-	"github.com/bilustek/avokado/avoresponse"
+	"github.com/bilustek/avokado/avokadoresponse"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
@@ -83,7 +83,7 @@ type config struct {
 	listenConfig                *fiber.ListenConfig
 	logClientErrors             bool
 	structValidator             fiber.StructValidator
-	customValidationMessageFunc avoresponse.ValidationMessageFunc
+	customValidationMessageFunc avokadoresponse.ValidationMessageFunc
 }
 
 // WithLogger sets the logger.
@@ -248,7 +248,7 @@ func WithWriteTimeout(d time.Duration) Option {
 }
 
 // WithCustomValidationMessageFunc sets a custom function for generating validation error messages.
-func WithCustomValidationMessageFunc(fnc avoresponse.ValidationMessageFunc) Option {
+func WithCustomValidationMessageFunc(fnc avokadoresponse.ValidationMessageFunc) Option {
 	return func(c *config) error {
 		if fnc != nil {
 			c.customValidationMessageFunc = fnc
@@ -317,19 +317,19 @@ func New(opts ...Option) (*Server, error) {
 		cfg.structValidator = &defaultStructValidator{validate: v}
 	}
 	if cfg.customValidationMessageFunc == nil {
-		cfg.customValidationMessageFunc = avoresponse.CustomValidationMessage
+		cfg.customValidationMessageFunc = avokadoresponse.CustomValidationMessage
 	}
 
 	fiberCfg := *cfg.fiberConfig
 	fiberCfg.AppName = cfg.serverName
 	fiberCfg.StructValidator = cfg.structValidator
 
-	errorHandlerArgs := &avoresponse.ErrorHTTPHandlerArgs{
+	errorHandlerArgs := &avokadoresponse.ErrorHTTPHandlerArgs{
 		Logger:                cfg.logger,
 		LogClientErrors:       cfg.logClientErrors,
 		ValidationMessageFunc: cfg.customValidationMessageFunc,
 	}
-	fiberCfg.ErrorHandler = avoresponse.NewErrorHandler(errorHandlerArgs)
+	fiberCfg.ErrorHandler = avokadoresponse.NewErrorHandler(errorHandlerArgs)
 
 	app := fiber.New(fiberCfg)
 

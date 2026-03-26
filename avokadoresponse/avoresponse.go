@@ -1,4 +1,4 @@
-package avoresponse
+package avokadoresponse
 
 import (
 	"errors"

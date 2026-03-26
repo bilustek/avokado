@@ -1,4 +1,4 @@
-package avoresponse_test
+package avokadoresponse_test
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/bilustek/avokado/avokadoerror"
-	"github.com/bilustek/avokado/avoresponse"
+	"github.com/bilustek/avokado/avokadoresponse"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -40,7 +40,7 @@ func containsSubstr(s, substr string) bool {
 func TestResponse_JSONMarshal_HasDataMetaLinks(t *testing.T) {
 	t.Parallel()
 
-	meta := &avoresponse.Meta{
+	meta := &avokadoresponse.Meta{
 		Page:        1,
 		PerPage:     10,
 		TotalCount:  100,
@@ -48,12 +48,12 @@ func TestResponse_JSONMarshal_HasDataMetaLinks(t *testing.T) {
 		HasPrevious: false,
 	}
 
-	links := &avoresponse.Links{
+	links := &avokadoresponse.Links{
 		Self: "/api/items?page=1&per_page=10",
 		Next: "/api/items?page=2&per_page=10",
 	}
 
-	resp := avoresponse.Response[[]string]{
+	resp := avokadoresponse.Response[[]string]{
 		Data:  []string{"a", "b"},
 		Meta:  meta,
 		Links: links,
@@ -86,7 +86,7 @@ func TestResponse_JSONMarshal_HasDataMetaLinks(t *testing.T) {
 func TestResponse_JSONMarshal_OmitsEmptyMetaAndLinks(t *testing.T) {
 	t.Parallel()
 
-	resp := avoresponse.Response[string]{
+	resp := avokadoresponse.Response[string]{
 		Data: "hello",
 	}
 
@@ -121,7 +121,7 @@ func TestOK_Returns200WithData(t *testing.T) {
 	}
 
 	app.Get("/test", func(c fiber.Ctx) error {
-		return avoresponse.OK(c, item{ID: 1, Name: "test"})
+		return avokadoresponse.OK(c, item{ID: 1, Name: "test"})
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -164,14 +164,14 @@ func TestOKWithMeta_Returns200WithDataAndMeta(t *testing.T) {
 	app := setupApp()
 
 	app.Get("/test", func(c fiber.Ctx) error {
-		meta := &avoresponse.Meta{
+		meta := &avokadoresponse.Meta{
 			Page:       1,
 			PerPage:    10,
 			TotalCount: 50,
 			HasNext:    true,
 		}
 
-		return avoresponse.OKWithMeta(c, []string{"a", "b"}, meta)
+		return avokadoresponse.OKWithMeta(c, []string{"a", "b"}, meta)
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -208,7 +208,7 @@ func TestCreated_Returns201WithData(t *testing.T) {
 	app := setupApp()
 
 	app.Post("/test", func(c fiber.Ctx) error {
-		return avoresponse.Created(c, map[string]string{"id": "123"})
+		return avokadoresponse.Created(c, map[string]string{"id": "123"})
 	})
 
 	req := httptest.NewRequest("POST", "/test", nil)
@@ -241,7 +241,7 @@ func TestNoContent_Returns204WithNoBody(t *testing.T) {
 	app := setupApp()
 
 	app.Delete("/test", func(c fiber.Ctx) error {
-		return avoresponse.NoContent(c)
+		return avokadoresponse.NoContent(c)
 	})
 
 	req := httptest.NewRequest("DELETE", "/test", nil)
@@ -267,9 +267,9 @@ func TestFail_ReturnsErrorResponse(t *testing.T) {
 	app := setupApp()
 
 	app.Get("/test", func(c fiber.Ctx) error {
-		return avoresponse.Fail(c, 400,
-			avoresponse.ErrorItem{Code: "validation-error", Message: "email is required"},
-			avoresponse.ErrorItem{Code: "validation-error", Message: "name too short"},
+		return avokadoresponse.Fail(c, 400,
+			avokadoresponse.ErrorItem{Code: "validation-error", Message: "email is required"},
+			avokadoresponse.ErrorItem{Code: "validation-error", Message: "name too short"},
 		)
 	})
 
@@ -286,7 +286,7 @@ func TestFail_ReturnsErrorResponse(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 
-	var result avoresponse.ErrorResponse
+	var result avokadoresponse.ErrorResponse
 
 	if err := json.Unmarshal(body, &result); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
@@ -308,8 +308,8 @@ func TestFail_ReturnsErrorResponse(t *testing.T) {
 func TestErrorResponse_JSONMarshal(t *testing.T) {
 	t.Parallel()
 
-	resp := avoresponse.ErrorResponse{
-		Errors: []avoresponse.ErrorItem{
+	resp := avokadoresponse.ErrorResponse{
+		Errors: []avokadoresponse.ErrorItem{
 			{Code: "not-found", Message: "resource not found"},
 		},
 	}
@@ -330,7 +330,7 @@ func TestErrorResponse_JSONMarshal(t *testing.T) {
 		t.Fatal("expected 'errors' key in JSON")
 	}
 
-	var items []avoresponse.ErrorItem
+	var items []avokadoresponse.ErrorItem
 
 	if err := json.Unmarshal(errorsRaw, &items); err != nil {
 		t.Fatalf("unmarshal errors: %v", err)
@@ -352,7 +352,7 @@ func TestErrorResponse_JSONMarshal(t *testing.T) {
 func TestMeta_HasExpectedFields(t *testing.T) {
 	t.Parallel()
 
-	meta := avoresponse.Meta{
+	meta := avokadoresponse.Meta{
 		Page:        2,
 		PerPage:     25,
 		TotalCount:  100,
@@ -384,7 +384,7 @@ func TestMeta_HasExpectedFields(t *testing.T) {
 func TestMeta_JSONTags(t *testing.T) {
 	t.Parallel()
 
-	meta := avoresponse.Meta{
+	meta := avokadoresponse.Meta{
 		Page:        1,
 		PerPage:     10,
 		TotalCount:  50,
@@ -414,7 +414,7 @@ func TestMeta_JSONTags(t *testing.T) {
 func TestLinks_HasExpectedFields(t *testing.T) {
 	t.Parallel()
 
-	links := avoresponse.Links{
+	links := avokadoresponse.Links{
 		Self:     "/api/items?page=1&per_page=10",
 		Next:     "/api/items?page=2&per_page=10",
 		Previous: "/api/items?page=0&per_page=10",
@@ -436,7 +436,7 @@ func TestLinks_HasExpectedFields(t *testing.T) {
 func TestLinks_OmitsEmptyNextPrevious(t *testing.T) {
 	t.Parallel()
 
-	links := avoresponse.Links{
+	links := avokadoresponse.Links{
 		Self: "/api/items?page=1&per_page=10",
 	}
 
@@ -464,7 +464,7 @@ func TestBuildMeta_HasNextTrue(t *testing.T) {
 	t.Parallel()
 
 	// page=1, perPage=10, total=25 -> 1*10=10 < 25 -> HasNext=true
-	meta := avoresponse.BuildMeta(1, 10, 25)
+	meta := avokadoresponse.BuildMeta(1, 10, 25)
 
 	if !meta.HasNext {
 		t.Error("expected HasNext=true when page*perPage < totalCount")
@@ -479,7 +479,7 @@ func TestBuildMeta_HasNextFalse(t *testing.T) {
 	t.Parallel()
 
 	// page=3, perPage=10, total=25 -> 3*10=30 >= 25 -> HasNext=false
-	meta := avoresponse.BuildMeta(3, 10, 25)
+	meta := avokadoresponse.BuildMeta(3, 10, 25)
 
 	if meta.HasNext {
 		t.Error("expected HasNext=false when page*perPage >= totalCount")
@@ -493,7 +493,7 @@ func TestBuildMeta_HasNextFalse(t *testing.T) {
 func TestBuildMeta_HasPreviousTrue(t *testing.T) {
 	t.Parallel()
 
-	meta := avoresponse.BuildMeta(2, 10, 50)
+	meta := avokadoresponse.BuildMeta(2, 10, 50)
 
 	if !meta.HasPrevious {
 		t.Error("expected HasPrevious=true when page > 1")
@@ -503,7 +503,7 @@ func TestBuildMeta_HasPreviousTrue(t *testing.T) {
 func TestBuildMeta_HasPreviousFalse(t *testing.T) {
 	t.Parallel()
 
-	meta := avoresponse.BuildMeta(1, 10, 50)
+	meta := avokadoresponse.BuildMeta(1, 10, 50)
 
 	if meta.HasPrevious {
 		t.Error("expected HasPrevious=false when page == 1")
@@ -513,7 +513,7 @@ func TestBuildMeta_HasPreviousFalse(t *testing.T) {
 func TestBuildLinks_FirstPage_NoPreviousLink(t *testing.T) {
 	t.Parallel()
 
-	links := avoresponse.BuildLinks("/api/items", 1, 10, 25)
+	links := avokadoresponse.BuildLinks("/api/items", 1, 10, 25)
 
 	if links.Self == "" {
 		t.Error("expected Self link to be set")
@@ -532,7 +532,7 @@ func TestBuildLinks_LastPage_NoNextLink(t *testing.T) {
 	t.Parallel()
 
 	// page=3, perPage=10, total=25 -> last page
-	links := avoresponse.BuildLinks("/api/items", 3, 10, 25)
+	links := avokadoresponse.BuildLinks("/api/items", 3, 10, 25)
 
 	if links.Next != "" {
 		t.Error("expected Next to be empty on last page")
@@ -546,7 +546,7 @@ func TestBuildLinks_LastPage_NoNextLink(t *testing.T) {
 func TestBuildLinks_MiddlePage_BothLinks(t *testing.T) {
 	t.Parallel()
 
-	links := avoresponse.BuildLinks("/api/items", 2, 10, 50)
+	links := avokadoresponse.BuildLinks("/api/items", 2, 10, 50)
 
 	if links.Next == "" {
 		t.Error("expected Next link on middle page")
@@ -564,7 +564,7 @@ func TestBuildLinks_MiddlePage_BothLinks(t *testing.T) {
 func TestBuildLinks_LinkFormat(t *testing.T) {
 	t.Parallel()
 
-	links := avoresponse.BuildLinks("/api/items", 2, 10, 50)
+	links := avokadoresponse.BuildLinks("/api/items", 2, 10, 50)
 
 	expected := "/api/items?page=2&per_page=10"
 	if links.Self != expected {
@@ -588,14 +588,14 @@ func TestOKWithPagination_MetaAndLinksCorrect(t *testing.T) {
 	app := fiber.New()
 
 	app.Get("/items", func(c fiber.Ctx) error {
-		params := avoresponse.PaginationParams{
+		params := avokadoresponse.PaginationParams{
 			Page:       2,
 			PerPage:    10,
 			TotalCount: 50,
 			BaseURL:    "/api/items",
 		}
 
-		return avoresponse.OKWithPagination(c, []string{"item1", "item2"}, params)
+		return avokadoresponse.OKWithPagination(c, []string{"item1", "item2"}, params)
 	})
 
 	req := httptest.NewRequest("GET", "/items", nil)
@@ -612,9 +612,9 @@ func TestOKWithPagination_MetaAndLinksCorrect(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 
 	var result struct {
-		Data  []string           `json:"data"`
-		Meta  *avoresponse.Meta  `json:"meta"`
-		Links *avoresponse.Links `json:"links"`
+		Data  []string               `json:"data"`
+		Meta  *avokadoresponse.Meta  `json:"meta"`
+		Links *avokadoresponse.Links `json:"links"`
 	}
 
 	if err := json.Unmarshal(body, &result); err != nil {
@@ -666,7 +666,7 @@ func TestErrorHandler_FiberError(t *testing.T) {
 	t.Parallel()
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{}),
 	})
 
 	app.Get("/test", func(_ fiber.Ctx) error {
@@ -686,7 +686,7 @@ func TestErrorHandler_FiberError(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 
-	var result avoresponse.ErrorResponse
+	var result avokadoresponse.ErrorResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -708,7 +708,7 @@ func TestErrorHandler_AvokadoError(t *testing.T) {
 	t.Parallel()
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{}),
 	})
 
 	app.Get("/test", func(_ fiber.Ctx) error {
@@ -730,7 +730,7 @@ func TestErrorHandler_AvokadoError(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 
-	var result avoresponse.ErrorResponse
+	var result avokadoresponse.ErrorResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -752,7 +752,7 @@ func TestErrorHandler_AvokadoError_DefaultStatus500(t *testing.T) {
 	t.Parallel()
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{}),
 	})
 
 	app.Get("/test", func(_ fiber.Ctx) error {
@@ -776,7 +776,7 @@ func TestErrorHandler_UnknownError(t *testing.T) {
 	t.Parallel()
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{}),
 	})
 
 	app.Get("/test", func(_ fiber.Ctx) error {
@@ -796,7 +796,7 @@ func TestErrorHandler_UnknownError(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 
-	var result avoresponse.ErrorResponse
+	var result avokadoresponse.ErrorResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -825,7 +825,7 @@ func TestErrorHandler_NilError(t *testing.T) {
 	t.Parallel()
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{}),
 	})
 
 	// Fiber may call error handler with nil in edge cases
@@ -853,7 +853,7 @@ func TestErrorHandler_WithLogger_ServerError(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{
 			Logger: logger,
 		}),
 	})
@@ -889,7 +889,7 @@ func TestErrorHandler_WithLogger_ClientError_LogDisabled(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{
 			Logger: logger,
 		}),
 	})
@@ -922,7 +922,7 @@ func TestErrorHandler_WithLogger_ClientError_LogEnabled(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{
 			Logger:          logger,
 			LogClientErrors: true,
 		}),
@@ -987,7 +987,7 @@ func TestErrorHandler_ValidationError(t *testing.T) {
 
 	app := fiber.New(fiber.Config{
 		StructValidator: sv,
-		ErrorHandler:    avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+		ErrorHandler:    avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{}),
 	})
 
 	app.Post("/test", func(c fiber.Ctx) error {
@@ -1016,7 +1016,7 @@ func TestErrorHandler_ValidationError(t *testing.T) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 
-	var result avoresponse.ErrorResponse
+	var result avokadoresponse.ErrorResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -1042,7 +1042,7 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 
 	app := fiber.New(fiber.Config{
 		StructValidator: sv,
-		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+		ErrorHandler: avokadoresponse.NewErrorHandler(&avokadoresponse.ErrorHTTPHandlerArgs{
 			Logger:          logger,
 			LogClientErrors: true,
 		}),
@@ -1069,7 +1069,7 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 
-	var result avoresponse.ErrorResponse
+	var result avokadoresponse.ErrorResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -1106,18 +1106,18 @@ type mockFieldError struct {
 	value interface{}
 }
 
-func (m mockFieldError) Tag() string            { return m.tag }
-func (m mockFieldError) ActualTag() string       { return m.tag }
-func (m mockFieldError) Namespace() string       { return "" }
-func (m mockFieldError) StructNamespace() string { return "" }
-func (m mockFieldError) Field() string           { return m.field }
-func (m mockFieldError) StructField() string     { return m.field }
-func (m mockFieldError) Value() interface{}      { return m.value }
-func (m mockFieldError) Param() string           { return m.param }
-func (m mockFieldError) Kind() reflect.Kind      { return reflect.String }
-func (m mockFieldError) Type() reflect.Type      { return reflect.TypeOf("") }
+func (m mockFieldError) Tag() string                      { return m.tag }
+func (m mockFieldError) ActualTag() string                { return m.tag }
+func (m mockFieldError) Namespace() string                { return "" }
+func (m mockFieldError) StructNamespace() string          { return "" }
+func (m mockFieldError) Field() string                    { return m.field }
+func (m mockFieldError) StructField() string              { return m.field }
+func (m mockFieldError) Value() interface{}               { return m.value }
+func (m mockFieldError) Param() string                    { return m.param }
+func (m mockFieldError) Kind() reflect.Kind               { return reflect.String }
+func (m mockFieldError) Type() reflect.Type               { return reflect.TypeOf("") }
 func (m mockFieldError) Translate(_ ut.Translator) string { return "" }
-func (m mockFieldError) Error() string           { return m.tag }
+func (m mockFieldError) Error() string                    { return m.tag }
 
 func TestCustomValidationMessage(t *testing.T) {
 	t.Parallel()
@@ -1168,7 +1168,7 @@ func TestCustomValidationMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := avoresponse.CustomValidationMessage(tt.fe)
+			got := avokadoresponse.CustomValidationMessage(tt.fe)
 			if got != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, got)
 			}
