@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/bilustek/avokado/avoerror"
-	"github.com/bilustek/avokado/avologger"
+	"github.com/bilustek/avokado/avokadologger"
 	"github.com/bilustek/avokado/avoresponse"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -38,7 +38,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 			"name", s.config.serverName,
 			"version", s.config.serverVersion,
 			"avokado_version", Version,
-			"sentry_enabled", avologger.IsSentryEnabled(s.config.logger),
+			"sentry_enabled", avokadologger.IsSentryEnabled(s.config.logger),
 		)
 		if s.config.listenConfig != nil {
 			errCh <- s.App.Listen(s.config.listenAddr, *s.config.listenConfig)

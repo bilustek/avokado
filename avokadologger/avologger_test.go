@@ -1,4 +1,4 @@
-package avologger_test
+package avokadologger_test
 
 import (
 	"bytes"
@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/bilustek/avokado/avologger"
+	"github.com/bilustek/avokado/avokadologger"
 )
 
 func TestNew_ReturnsLogger(t *testing.T) {
 	t.Parallel()
 
-	logger, err := avologger.New()
+	logger, err := avokadologger.New()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestNew_DefaultIsJSONHandler(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	logger, err := avologger.New(avologger.WithWriter(&buf))
+	logger, err := avokadologger.New(avokadologger.WithWriter(&buf))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,9 +57,9 @@ func TestNew_WithLevel(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	logger, err := avologger.New(
-		avologger.WithLevel(slog.LevelWarn),
-		avologger.WithWriter(&buf),
+	logger, err := avokadologger.New(
+		avokadologger.WithLevel(slog.LevelWarn),
+		avokadologger.WithWriter(&buf),
 	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -87,7 +87,7 @@ func TestNew_WithCustomHandler(t *testing.T) {
 	var buf bytes.Buffer
 	customHandler := slog.NewTextHandler(&buf, nil)
 
-	logger, err := avologger.New(avologger.WithHandler(customHandler))
+	logger, err := avokadologger.New(avokadologger.WithHandler(customHandler))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestNew_WithWriter(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	logger, err := avologger.New(avologger.WithWriter(&buf))
+	logger, err := avokadologger.New(avokadologger.WithWriter(&buf))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestNew_StructuredJSONOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	logger, err := avologger.New(avologger.WithWriter(&buf))
+	logger, err := avokadologger.New(avokadologger.WithWriter(&buf))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

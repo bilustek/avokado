@@ -1,4 +1,4 @@
-package avologger
+package avokadologger
 
 import (
 	"context"

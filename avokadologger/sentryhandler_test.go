@@ -1,4 +1,4 @@
-package avologger_test
+package avokadologger_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bilustek/avokado/avologger"
+	"github.com/bilustek/avokado/avokadologger"
 )
 
 func TestNewSentryHandler_WrapsInnerHandler(t *testing.T) {
@@ -16,7 +16,7 @@ func TestNewSentryHandler_WrapsInnerHandler(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, nil)
 
-	handler := avologger.NewSentryHandler(inner, nil)
+	handler := avokadologger.NewSentryHandler(inner, nil)
 	if handler == nil {
 		t.Fatal("expected non-nil SentryHandler")
 	}
@@ -30,7 +30,7 @@ func TestSentryHandler_PassesInfoToInner(t *testing.T) {
 
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, nil)
-	handler := avologger.NewSentryHandler(inner, nil)
+	handler := avokadologger.NewSentryHandler(inner, nil)
 
 	logger := slog.New(handler)
 	logger.Info("info message")
@@ -45,7 +45,7 @@ func TestSentryHandler_PassesWarnToInner(t *testing.T) {
 
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, nil)
-	handler := avologger.NewSentryHandler(inner, nil)
+	handler := avokadologger.NewSentryHandler(inner, nil)
 
 	logger := slog.New(handler)
 	logger.Warn("warn message")
@@ -66,7 +66,7 @@ func TestSentryHandler_ErrorLevelTriggersSentry(t *testing.T) {
 		captured = append(captured, msg)
 	}
 
-	handler := avologger.NewSentryHandler(inner, mockCapture)
+	handler := avokadologger.NewSentryHandler(inner, mockCapture)
 
 	logger := slog.New(handler)
 	logger.Error("error message")
@@ -95,7 +95,7 @@ func TestSentryHandler_InfoDoesNotTriggerSentry(t *testing.T) {
 		captured = append(captured, msg)
 	}
 
-	handler := avologger.NewSentryHandler(inner, mockCapture)
+	handler := avokadologger.NewSentryHandler(inner, mockCapture)
 
 	logger := slog.New(handler)
 	logger.Info("info message")
@@ -116,7 +116,7 @@ func TestSentryHandler_DetectsSentryHandledError(t *testing.T) {
 		captured = append(captured, msg)
 	}
 
-	handler := avologger.NewSentryHandler(inner, mockCapture)
+	handler := avokadologger.NewSentryHandler(inner, mockCapture)
 
 	// Create a record at Error level with the sentry_handled sentinel attribute.
 	ctx := context.Background()
@@ -126,7 +126,7 @@ func TestSentryHandler_DetectsSentryHandledError(t *testing.T) {
 		"error already handled by sentry",
 		0,
 	)
-	rec.AddAttrs(slog.Bool(avologger.SentryHandledAttrKey, true))
+	rec.AddAttrs(slog.Bool(avokadologger.SentryHandledAttrKey, true))
 
 	_ = handler.Handle(ctx, rec)
 
@@ -140,7 +140,7 @@ func TestSentryHandler_WithAttrs(t *testing.T) {
 
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, nil)
-	handler := avologger.NewSentryHandler(inner, nil)
+	handler := avokadologger.NewSentryHandler(inner, nil)
 
 	withAttrs := handler.WithAttrs([]slog.Attr{slog.String("service", "test")})
 	if withAttrs == nil {
@@ -153,7 +153,7 @@ func TestSentryHandler_WithGroup(t *testing.T) {
 
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, nil)
-	handler := avologger.NewSentryHandler(inner, nil)
+	handler := avokadologger.NewSentryHandler(inner, nil)
 
 	withGroup := handler.WithGroup("request")
 	if withGroup == nil {
@@ -166,7 +166,7 @@ func TestSentryHandler_Enabled(t *testing.T) {
 
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})
-	handler := avologger.NewSentryHandler(inner, nil)
+	handler := avokadologger.NewSentryHandler(inner, nil)
 
 	if handler.Enabled(context.Background(), slog.LevelInfo) {
 		t.Error("expected Info to be disabled when inner is at Warn level")
