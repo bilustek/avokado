@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bilustek/avokado/avoerror"
+	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadologger"
 	"github.com/bilustek/avokado/avoresponse"
 	"github.com/go-playground/validator/v10"
@@ -203,7 +203,7 @@ func WithIdleTimeout(d time.Duration) Option {
 		if d < 0 {
 			return fmt.Errorf(
 				"%w '%s' received, must > 0",
-				avoerror.New("[avokado.WithIdleTimeout] err:").WithCode(avoerror.CodeInvalidParam),
+				avokadoerror.New("[avokado.WithIdleTimeout] err:").WithCode(avokadoerror.CodeInvalidParam),
 				d,
 			)
 		}
@@ -219,7 +219,7 @@ func WithReadTimeout(d time.Duration) Option {
 		if d < 0 {
 			return fmt.Errorf(
 				"%w, '%s' received, must > 0",
-				avoerror.New("[avokado.WithReadTimeout] err:").WithCode(avoerror.CodeInvalidParam),
+				avokadoerror.New("[avokado.WithReadTimeout] err:").WithCode(avokadoerror.CodeInvalidParam),
 				d,
 			)
 		}
@@ -236,7 +236,7 @@ func WithWriteTimeout(d time.Duration) Option {
 		if d < 0 {
 			return fmt.Errorf(
 				"%w, '%s' received, must > 0",
-				avoerror.New("[avokado.WithWriteTimeout] err:").WithCode(avoerror.CodeInvalidParam),
+				avokadoerror.New("[avokado.WithWriteTimeout] err:").WithCode(avokadoerror.CodeInvalidParam),
 				d,
 			)
 		}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/bilustek/avokado/avoerror"
+	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
@@ -150,7 +150,7 @@ func NewErrorHandler(args *ErrorHTTPHandlerArgs) fiber.ErrorHandler {
 		if err == nil {
 			return Fail(c, fiber.StatusInternalServerError,
 				ErrorItem{
-					Code:    string(avoerror.CodeInternalError),
+					Code:    string(avokadoerror.CodeInternalError),
 					Message: "internal server error",
 				},
 			)
@@ -176,7 +176,7 @@ func classifyError(err error, vldMsgFunc ValidationMessageFunc) (int, []ErrorIte
 	if errors.As(err, &fiberErr) {
 		return fiberErr.Code, []ErrorItem{
 			{
-				Code:    string(avoerror.CodeHTTPError),
+				Code:    string(avokadoerror.CodeHTTPError),
 				Message: fiberErr.Message,
 			},
 		}
@@ -187,7 +187,7 @@ func classifyError(err error, vldMsgFunc ValidationMessageFunc) (int, []ErrorIte
 		items := make([]ErrorItem, 0, len(validErrs))
 		for _, fe := range validErrs {
 			items = append(items, ErrorItem{
-				Code:    string(avoerror.CodeValidationError),
+				Code:    string(avokadoerror.CodeValidationError),
 				Message: vldMsgFunc(fe),
 			})
 		}
@@ -195,7 +195,7 @@ func classifyError(err error, vldMsgFunc ValidationMessageFunc) (int, []ErrorIte
 		return fiber.StatusUnprocessableEntity, items
 	}
 
-	var appErr *avoerror.Error
+	var appErr *avokadoerror.Error
 	if errors.As(err, &appErr) {
 		status := appErr.Status
 		if status == 0 {
@@ -212,7 +212,7 @@ func classifyError(err error, vldMsgFunc ValidationMessageFunc) (int, []ErrorIte
 
 	return fiber.StatusInternalServerError, []ErrorItem{
 		{
-			Code:    string(avoerror.CodeInternalError),
+			Code:    string(avokadoerror.CodeInternalError),
 			Message: "internal server error",
 		},
 	}

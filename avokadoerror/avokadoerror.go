@@ -1,4 +1,4 @@
-package avoerror
+package avokadoerror
 
 // ErrorCode represents a typed error code string for API error responses.
 type ErrorCode string

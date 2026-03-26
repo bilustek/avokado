@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bilustek/avokado/avoerror"
+	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avoresponse"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
@@ -712,9 +712,9 @@ func TestErrorHandler_AvokadoError(t *testing.T) {
 	})
 
 	app.Get("/test", func(_ fiber.Ctx) error {
-		return avoerror.New("user not found").
+		return avokadoerror.New("user not found").
 			WithStatus(fiber.StatusNotFound).
-			WithCode(avoerror.CodeNotFound)
+			WithCode(avokadoerror.CodeNotFound)
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -739,8 +739,8 @@ func TestErrorHandler_AvokadoError(t *testing.T) {
 		t.Fatalf("expected 1 error, got %d", len(result.Errors))
 	}
 
-	if result.Errors[0].Code != string(avoerror.CodeNotFound) {
-		t.Errorf("expected code %q, got %q", avoerror.CodeNotFound, result.Errors[0].Code)
+	if result.Errors[0].Code != string(avokadoerror.CodeNotFound) {
+		t.Errorf("expected code %q, got %q", avokadoerror.CodeNotFound, result.Errors[0].Code)
 	}
 
 	if result.Errors[0].Message != "user not found" {
@@ -756,8 +756,8 @@ func TestErrorHandler_AvokadoError_DefaultStatus500(t *testing.T) {
 	})
 
 	app.Get("/test", func(_ fiber.Ctx) error {
-		return avoerror.New("something broke").
-			WithCode(avoerror.CodeInternalError)
+		return avokadoerror.New("something broke").
+			WithCode(avokadoerror.CodeInternalError)
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -1026,8 +1026,8 @@ func TestErrorHandler_ValidationError(t *testing.T) {
 	}
 
 	for _, item := range result.Errors {
-		if item.Code != string(avoerror.CodeValidationError) {
-			t.Errorf("expected code %q, got %q", avoerror.CodeValidationError, item.Code)
+		if item.Code != string(avokadoerror.CodeValidationError) {
+			t.Errorf("expected code %q, got %q", avokadoerror.CodeValidationError, item.Code)
 		}
 	}
 }
@@ -1079,8 +1079,8 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 	}
 
 	for _, item := range result.Errors {
-		if item.Code != string(avoerror.CodeValidationError) {
-			t.Errorf("expected code %q, got %q", avoerror.CodeValidationError, item.Code)
+		if item.Code != string(avokadoerror.CodeValidationError) {
+			t.Errorf("expected code %q, got %q", avokadoerror.CodeValidationError, item.Code)
 		}
 	}
 

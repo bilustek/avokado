@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bilustek/avokado/avoerror"
+	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadodb"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -288,7 +288,7 @@ func TestNew_OptionError(t *testing.T) {
 
 // isOptionError checks if the error is from option validation (not from DB connection).
 func isOptionError(err error) bool {
-	var avoErr *avoerror.Error
+	var avoErr *avokadoerror.Error
 
 	return errors.As(err, &avoErr)
 }
