@@ -13,6 +13,7 @@ const (
 	CodeConflict        ErrorCode = "conflict"
 	CodeInvalidParam    ErrorCode = "invalid-param"
 	CodeHTTPError       ErrorCode = "http-error"
+	CodeDatabaseError   ErrorCode = "database-error"
 )
 
 // Error is the core error type for avokado. It supports fluent builder chaining
