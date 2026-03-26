@@ -974,8 +974,9 @@ func (v *testStructValidator) Validate(out any) error {
 }
 
 type testValidationPayload struct {
-	Name  string `json:"name"  validate:"required"`
-	Email string `json:"email" validate:"required,email"`
+	Name   string `json:"name"   validate:"required"`
+	Email  string `json:"email"  validate:"required,email"`
+	Passwd string `json:"passwd" validate:"min=2,max=4"`
 }
 
 func TestErrorHandler_ValidationError(t *testing.T) {
@@ -990,6 +991,7 @@ func TestErrorHandler_ValidationError(t *testing.T) {
 
 	app.Post("/test", func(c fiber.Ctx) error {
 		var payload testValidationPayload
+
 		if err := c.Bind().Body(&payload); err != nil {
 			return err
 		}
@@ -997,7 +999,7 @@ func TestErrorHandler_ValidationError(t *testing.T) {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	body := bytes.NewBufferString(`{"name":"","email":"bad"}`)
+	body := bytes.NewBufferString(`{"name":"","email":"bad","passwd":"1"}`)
 	req := httptest.NewRequest("POST", "/test", body)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -1054,7 +1056,7 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	body := bytes.NewBufferString(`{"name":"","email":"bad"}`)
+	body := bytes.NewBufferString(`{"name":"","email":"bad","passwd":"1"}`)
 	req := httptest.NewRequest("POST", "/test", body)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -1063,9 +1065,6 @@ func TestErrorHandler_ValidationError_WithLogger(t *testing.T) {
 		t.Fatalf("app.Test failed: %v", err)
 	}
 	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	fmt.Println("response:", string(respBody))
 
 	if resp.StatusCode != fiber.StatusUnprocessableEntity {
 		t.Errorf("expected status %d, got %d", fiber.StatusUnprocessableEntity, resp.StatusCode)

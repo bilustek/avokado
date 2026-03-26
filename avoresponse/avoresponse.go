@@ -210,31 +210,31 @@ func classifyError(err error) (int, []ErrorItem) {
 	}
 }
 
+func singleQuote(s string) string {
+	return "'" + s + "'"
+}
+
 func validationMessage(fe validator.FieldError) string {
 	value := fmt.Sprintf("%v", fe.Value())
+	sqValue := singleQuote(value)
 
 	field := fe.Field()
+	sqField := singleQuote(field)
+
 	tag := fe.Tag()
-	// param := fe.Param()
+	sqFieldTag := singleQuote(tag)
+
+	param := fe.Param()
 
 	switch tag {
 	case "required":
-		return "'" + field + "' field is required"
+		return sqField + " field is required, value can not be empty!"
 	case "email":
-		return "'" + value + "' is not a valid email for '" + field + "' field"
+		return sqValue + " is not a valid email for " + sqField + " field"
+	case "max":
+		return sqValue + " length is greater than " + param + " for " + sqField + "field"
+	case "min":
+		return sqValue + " length is less than " + param + " for " + sqField + "field"
 	}
-	return tag
-
-	//
-	// if param != "" {
-	// 	return fmt.Sprintf(
-	// 		"field validation for '%s' failed on the '%s' tag (param: %s)",
-	// 		field, tag, param,
-	// 	)
-	// }
-	//
-	// return fmt.Sprintf(
-	// 	"field validation for '%s' failed on the '%s' tag",
-	// 	field, tag,
-	// )
+	return sqFieldTag + " validation error, " + sqValue + " is invalid for " + sqField + "field"
 }
