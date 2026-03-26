@@ -127,24 +127,35 @@ func BuildLinks(baseURL string, page, perPage, totalCount int) *Links {
 	return links
 }
 
+// ErrorHTTPHandlerArgs represents error http handler args.
+type ErrorHTTPHandlerArgs struct {
+	Logger          *slog.Logger
+	LogClientErrors bool
+}
+
 // NewErrorHandler creates a Fiber ErrorHandler that converts errors into
 // unified ErrorResponse format. The logger parameter is optional (can be nil).
 // Logger behavior: 5xx errors logged at Error level, 4xx at Warn level.
-func NewErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
+func NewErrorHandler(args *ErrorHTTPHandlerArgs) fiber.ErrorHandler {
 	return func(c fiber.Ctx, err error) error {
 		if err == nil {
 			return Fail(c, fiber.StatusInternalServerError,
 				ErrorItem{
 					Code:    string(avoerror.CodeInternalError),
-					Message: "Internal Server Error",
+					Message: "internal server error",
 				},
 			)
 		}
 
 		status, items := classifyError(err)
 
+		logger := args.Logger
 		if logger != nil {
-			logError(logger, status, err)
+			if status >= fiber.StatusInternalServerError {
+				logger.Error("server error", slog.Int("status", status), slog.String("error", err.Error()))
+			} else if args.LogClientErrors {
+				logger.Warn("client error", slog.Int("status", status), slog.String("error", err.Error()))
+			}
 		}
 
 		return Fail(c, status, items...)
@@ -180,15 +191,7 @@ func classifyError(err error) (int, []ErrorItem) {
 	return fiber.StatusInternalServerError, []ErrorItem{
 		{
 			Code:    string(avoerror.CodeInternalError),
-			Message: "Internal Server Error",
+			Message: "internal server error",
 		},
-	}
-}
-
-func logError(logger *slog.Logger, status int, err error) {
-	if status >= fiber.StatusInternalServerError {
-		logger.Error("server error", slog.Int("status", status), slog.String("error", err.Error()))
-	} else {
-		logger.Warn("client error", slog.Int("status", status), slog.String("error", err.Error()))
 	}
 }

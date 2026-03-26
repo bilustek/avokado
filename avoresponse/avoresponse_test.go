@@ -1,17 +1,35 @@
 package avoresponse_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
+	"log/slog"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/bilustek/avokado/avoerror"
 	"github.com/bilustek/avokado/avoresponse"
 	"github.com/gofiber/fiber/v3"
 )
 
 func setupApp() *fiber.App {
 	return fiber.New()
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstr(s, substr))
+}
+
+func containsSubstr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func TestResponse_JSONMarshal_HasDataMetaLinks(t *testing.T) {
@@ -636,5 +654,295 @@ func TestOKWithPagination_MetaAndLinksCorrect(t *testing.T) {
 
 	if result.Links.Previous != "/api/items?page=1&per_page=10" {
 		t.Errorf("unexpected Previous link: %q", result.Links.Previous)
+	}
+}
+
+func TestErrorHandler_FiberError(t *testing.T) {
+	t.Parallel()
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusNotFound {
+		t.Errorf("expected status %d, got %d", fiber.StatusNotFound, resp.StatusCode)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var result avoresponse.ErrorResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(result.Errors))
+	}
+
+	if result.Errors[0].Code != "http-error" {
+		t.Errorf("expected code 'http-error', got %q", result.Errors[0].Code)
+	}
+
+	if result.Errors[0].Message != "not found" {
+		t.Errorf("expected message 'not found', got %q", result.Errors[0].Message)
+	}
+}
+
+func TestErrorHandler_AvokadoError(t *testing.T) {
+	t.Parallel()
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return avoerror.New("user not found").
+			WithStatus(fiber.StatusNotFound).
+			WithCode(avoerror.CodeNotFound)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusNotFound {
+		t.Errorf("expected status %d, got %d", fiber.StatusNotFound, resp.StatusCode)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var result avoresponse.ErrorResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(result.Errors))
+	}
+
+	if result.Errors[0].Code != string(avoerror.CodeNotFound) {
+		t.Errorf("expected code %q, got %q", avoerror.CodeNotFound, result.Errors[0].Code)
+	}
+
+	if result.Errors[0].Message != "user not found" {
+		t.Errorf("expected message 'user not found', got %q", result.Errors[0].Message)
+	}
+}
+
+func TestErrorHandler_AvokadoError_DefaultStatus500(t *testing.T) {
+	t.Parallel()
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return avoerror.New("something broke").
+			WithCode(avoerror.CodeInternalError)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Errorf("expected status %d (default), got %d", fiber.StatusInternalServerError, resp.StatusCode)
+	}
+}
+
+func TestErrorHandler_UnknownError(t *testing.T) {
+	t.Parallel()
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return errors.New("secret database password exposed") //nolint:err113
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", fiber.StatusInternalServerError, resp.StatusCode)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var result avoresponse.ErrorResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(result.Errors))
+	}
+
+	if result.Errors[0].Code != "internal-error" {
+		t.Errorf("expected code 'internal-error', got %q", result.Errors[0].Code)
+	}
+
+	// Real error message must NOT be exposed
+	if result.Errors[0].Message != "internal server error" {
+		t.Errorf("expected 'internal server error', got %q", result.Errors[0].Message)
+	}
+
+	// Verify the real message is NOT in the response body
+	bodyStr := string(body)
+	if contains(bodyStr, "secret database password exposed") {
+		t.Error("real error message should NOT appear in response body")
+	}
+}
+
+func TestErrorHandler_NilError(t *testing.T) {
+	t.Parallel()
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{}),
+	})
+
+	// Fiber may call error handler with nil in edge cases
+	app.Get("/test", func(c fiber.Ctx) error {
+		// Manually invoke the error handler with nil
+		return app.Config().ErrorHandler(c, nil)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", fiber.StatusInternalServerError, resp.StatusCode)
+	}
+}
+
+func TestErrorHandler_WithLogger_ServerError(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+			Logger: logger,
+		}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return errors.New("some error") //nolint:err113
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", fiber.StatusInternalServerError, resp.StatusCode)
+	}
+
+	logOutput := buf.String()
+	if !contains(logOutput, "server error") {
+		t.Error("expected 'server error' in log output")
+	}
+	if !contains(logOutput, "ERROR") {
+		t.Error("expected ERROR level in log output")
+	}
+}
+
+func TestErrorHandler_WithLogger_ClientError_LogDisabled(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+			Logger: logger,
+		}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusNotFound {
+		t.Errorf("expected status %d, got %d", fiber.StatusNotFound, resp.StatusCode)
+	}
+
+	logOutput := buf.String()
+	if logOutput != "" {
+		t.Errorf("expected no log output when LogClientErrors is false, got %q", logOutput)
+	}
+}
+
+func TestErrorHandler_WithLogger_ClientError_LogEnabled(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: avoresponse.NewErrorHandler(&avoresponse.ErrorHTTPHandlerArgs{
+			Logger:          logger,
+			LogClientErrors: true,
+		}),
+	})
+
+	app.Get("/test", func(_ fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusNotFound {
+		t.Errorf("expected status %d, got %d", fiber.StatusNotFound, resp.StatusCode)
+	}
+
+	logOutput := buf.String()
+	if !contains(logOutput, "client error") {
+		t.Error("expected 'client error' in log output")
+	}
+	if !contains(logOutput, "WARN") {
+		t.Error("expected WARN level in log output")
 	}
 }

@@ -184,6 +184,19 @@ func TestNew_WithNegativeWriteTimeout(t *testing.T) {
 	}
 }
 
+func TestNew_WithLogClientErrors(t *testing.T) {
+	t.Parallel()
+
+	server, err := avokado.New(avokado.WithLogClientErrors(true))
+	if err != nil {
+		t.Fatalf("avokado.New error: %v", err)
+	}
+
+	if server == nil {
+		t.Fatal("expected non-nil *Server")
+	}
+}
+
 func TestNew_WithAllOptions(t *testing.T) {
 	t.Parallel()
 
@@ -202,6 +215,7 @@ func TestNew_WithAllOptions(t *testing.T) {
 		avokado.WithWriteTimeout(15*time.Second),
 		avokado.WithFiberConfig(&fiber.Config{}),
 		avokado.WithListenConfig(&fiber.ListenConfig{}),
+		avokado.WithLogClientErrors(true),
 	)
 	if err != nil {
 		t.Fatalf("avokado.New error: %v", err)

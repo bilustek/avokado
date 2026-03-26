@@ -11,6 +11,7 @@ import (
 
 	"github.com/bilustek/avokado/avoerror"
 	"github.com/bilustek/avokado/avologger"
+	"github.com/bilustek/avokado/avoresponse"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -77,6 +78,7 @@ type config struct {
 	writeTimeout          time.Duration
 	fiberConfig           *fiber.Config
 	listenConfig          *fiber.ListenConfig
+	logClientErrors       bool
 }
 
 // WithLogger sets the logger.
@@ -166,6 +168,15 @@ func WithFiberConfig(fiberConfig *fiber.Config) Option {
 func WithListenConfig(listenConfig *fiber.ListenConfig) Option {
 	return func(c *config) error {
 		c.listenConfig = listenConfig
+
+		return nil
+	}
+}
+
+// WithLogClientErrors enables logging of client errors (4xx).
+func WithLogClientErrors(enabled bool) Option {
+	return func(c *config) error {
+		c.logClientErrors = enabled
 
 		return nil
 	}
@@ -271,12 +282,18 @@ func New(opts ...Option) (*Server, error) {
 	fiberCfg := *cfg.fiberConfig
 	fiberCfg.AppName = cfg.serverName
 
+	errorHandlerArgs := &avoresponse.ErrorHTTPHandlerArgs{
+		Logger:          cfg.logger,
+		LogClientErrors: cfg.logClientErrors,
+	}
+	fiberCfg.ErrorHandler = avoresponse.NewErrorHandler(errorHandlerArgs)
+
 	app := fiber.New(fiberCfg)
 
 	healthzHandlerArgs := &healthzHTTPHandlerArgs{}
-	healthzHandlerArgs.baseArgs.logger = cfg.logger
-	healthzHandlerArgs.baseArgs.serverEnvironmentName = cfg.serverEnvironmentName
-	healthzHandlerArgs.baseArgs.serverVersion = cfg.serverVersion
+	healthzHandlerArgs.baseArgs.Logger = cfg.logger
+	healthzHandlerArgs.baseArgs.ServerEnvironmentName = cfg.serverEnvironmentName
+	healthzHandlerArgs.baseArgs.ServerVersion = cfg.serverVersion
 	healthzHandlerArgs.serverName = cfg.serverName
 
 	app.Get(cfg.healthzURL, healthzHandler(healthzHandlerArgs))
@@ -286,9 +303,9 @@ func New(opts ...Option) (*Server, error) {
 
 // BaseHTTPHandlerArgs represents common http handler args.
 type BaseHTTPHandlerArgs struct {
-	logger                *slog.Logger
-	serverEnvironmentName string
-	serverVersion         string
+	Logger                *slog.Logger
+	ServerEnvironmentName string
+	ServerVersion         string
 }
 
 type healthzHTTPHandlerArgs struct {
@@ -300,7 +317,7 @@ func healthzHandler(args *healthzHTTPHandlerArgs) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"name":            args.serverName,
-			"version":         args.baseArgs.serverVersion,
+			"version":         args.baseArgs.ServerVersion,
 			"avokado_version": Version,
 		})
 	}
