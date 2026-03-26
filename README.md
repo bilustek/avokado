@@ -13,6 +13,8 @@ Quick rest api server genarator (Django inspired!) for nerds! Batteries included
 - [Fiber V3](https://github.com/gofiber/fiber)
 - [Sentry](https://github.com/getsentry/sentry-go)
 - [Validator](https://github.com/go-playground/validator)
+- [PostgreSQL](https://www.postgresql.org/)
+- [Gorm](https://gorm.io/)
 
 @wip
 
