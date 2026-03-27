@@ -15,6 +15,7 @@ Quick rest api server genarator (Django inspired!) for nerds! Batteries included
 - [Validator](https://github.com/go-playground/validator)
 - [PostgreSQL](https://www.postgresql.org/)
 - [Gorm](https://gorm.io/)
+- [Golang Migrate](https://github.com/golang-migrate/migrate/)
 
 @wip
 
