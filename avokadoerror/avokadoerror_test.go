@@ -56,6 +56,28 @@ func TestFluentBuilder_WithErr(t *testing.T) {
 	}
 }
 
+func TestError_WithErr_IncludesInnerMessage(t *testing.T) {
+	t.Parallel()
+
+	inner := fmt.Errorf("connection refused")
+	err := avokadoerror.New("gosecrets.Load err").WithErr(inner)
+
+	expected := "gosecrets.Load err: connection refused"
+	if err.Error() != expected {
+		t.Errorf("expected %q, got %q", expected, err.Error())
+	}
+}
+
+func TestError_WithoutErr_OnlyMessage(t *testing.T) {
+	t.Parallel()
+
+	err := avokadoerror.New("simple error")
+
+	if err.Error() != "simple error" {
+		t.Errorf("expected %q, got %q", "simple error", err.Error())
+	}
+}
+
 func TestUnwrap_ReturnsInnerError(t *testing.T) {
 	t.Parallel()
 

@@ -53,6 +53,10 @@ func (e *Error) WithErr(err error) *Error {
 
 // Error implements the error interface.
 func (e *Error) Error() string {
+	if e.Err != nil {
+		return e.Message + ": " + e.Err.Error()
+	}
+
 	return e.Message
 }
 
