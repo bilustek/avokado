@@ -1,3 +1,5 @@
+// Package avokadodb provides GORM PostgreSQL connection builder with
+// functional options.
 package avokadodb
 
 import (
@@ -240,7 +242,7 @@ func WithGormLogLevel(n int) Option {
 }
 
 // New creates a new GORM database connection with the given options.
-func New(opts ...Option) (*gorm.DB, error) {
+func New(ctx context.Context, opts ...Option) (*gorm.DB, error) {
 	cfg := &config{
 		maxOpenConns:    defaultMaxOpenConns,
 		maxIdleConns:    defaultMaxIdleConns,
@@ -302,7 +304,7 @@ func New(opts ...Option) (*gorm.DB, error) {
 	sqlDB.SetConnMaxIdleTime(cfg.connMaxIdleTime)
 	sqlDB.SetConnMaxLifetime(cfg.connMaxLifetime)
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.pingTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cfg.pingTimeout)
 	defer cancel()
 
 	if err := sqlDB.PingContext(ctx); err != nil {
