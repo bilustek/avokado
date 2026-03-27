@@ -108,6 +108,7 @@ func TestErrorCodeConstants_AllDefined(t *testing.T) {
 		"conflict":         avokadoerror.CodeConflict,
 		"invalid-param":    avokadoerror.CodeInvalidParam,
 		"http-error":       avokadoerror.CodeHTTPError,
+		"database-error":   avokadoerror.CodeDatabaseError,
 	}
 
 	for expected, code := range codes {

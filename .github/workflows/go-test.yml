@@ -30,6 +30,21 @@ jobs:
       matrix:
         go-version: ['1.26', 'stable']
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: avokado_test
+          POSTGRES_PASSWORD: avokado_test
+          POSTGRES_DB: avokado_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -45,6 +60,8 @@ jobs:
 
       - name: Run tests
         run: go test -coverprofile=coverage.txt -race -failfast -count=1 ./...
+        env:
+          DATABASE_URL: postgres://avokado_test:avokado_test@localhost:5432/avokado_test?sslmode=disable
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
