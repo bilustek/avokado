@@ -7,3 +7,8 @@ repos:
       - id: go-mod-tidy
       - id: go-test-mod
         args: [-race, -failfast, -count=1]
+  - repo: https://github.com/sbdchd/squawk
+    rev: v2.44.0
+    hooks:
+      - id: squawk
+        files: avokadodb/migrations/.*\.sql$
