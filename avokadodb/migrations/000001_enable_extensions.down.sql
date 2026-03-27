@@ -1,3 +1,4 @@
--- Uncomment the line below only if you need a clean rollback.
--- DROP EXTENSION IF EXISTS "pgcrypto";
--- DROP EXTENSION IF EXISTS "uuid-ossp";
+SET lock_timeout = '1s';
+SET statement_timeout = '5s';
+
+DROP EXTENSION IF EXISTS "pgcrypto";
