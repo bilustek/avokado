@@ -194,6 +194,32 @@ func TestMigrationForce_MalformedURL(t *testing.T) {
 
 // Integration tests — require DATABASE_URL env var (skipped otherwise).
 
+func TestMigrationVersion_NilVersion_Integration(t *testing.T) {
+	dbURL := testDatabaseURL(t)
+
+	// roll back everything to get a clean state.
+	for {
+		err := avokadodb.MigrationDown(dbURL)
+		if err != nil {
+			break
+		}
+	}
+
+	// no migrations applied — should return version 0, no error.
+	version, dirty, err := avokadodb.MigrationVersion(dbURL)
+	if err != nil {
+		t.Fatalf("expected nil error for ErrNilVersion, got: %v", err)
+	}
+
+	if version != 0 {
+		t.Errorf("expected version 0, got %d", version)
+	}
+
+	if dirty {
+		t.Error("expected dirty to be false")
+	}
+}
+
 func TestRunMigrations_Integration(t *testing.T) {
 	dbURL := testDatabaseURL(t)
 
@@ -246,11 +272,14 @@ func TestMigrationDownAndUp_Integration(t *testing.T) {
 		t.Fatalf("MigrationDown failed: %v", err)
 	}
 
-	// after rolling back all migrations, Version() returns "no migration" error
-	// which is expected — it means we're at version 0 (no migrations applied).
-	_, _, err = avokadodb.MigrationVersion(dbURL)
+	// after full rollback, version should be 0 with no error.
+	versionAfterDown, _, err := avokadodb.MigrationVersion(dbURL)
 	if err != nil {
-		t.Logf("MigrationVersion after full rollback returned expected error: %v", err)
+		t.Fatalf("MigrationVersion after down failed: %v", err)
+	}
+
+	if versionAfterDown != 0 {
+		t.Errorf("expected version 0 after full rollback, got %d", versionAfterDown)
 	}
 
 	// re-apply.

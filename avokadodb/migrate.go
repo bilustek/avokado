@@ -101,6 +101,7 @@ func MigrationDown(databaseURL string) error {
 }
 
 // MigrationVersion returns the current migration version and dirty state.
+// Returns version 0 with nil error if no migrations have been applied yet.
 func MigrationVersion(databaseURL string) (version uint, dirty bool, err error) {
 	m, err := newMigrate(databaseURL)
 	if err != nil {
@@ -110,6 +111,10 @@ func MigrationVersion(databaseURL string) (version uint, dirty bool, err error) 
 
 	ver, dirtyState, err := m.Version()
 	if err != nil {
+		if errors.Is(err, migrate.ErrNilVersion) {
+			return 0, false, nil
+		}
+
 		return 0, false, fmt.Errorf("avokadodb: migration version: %w", err)
 	}
 
