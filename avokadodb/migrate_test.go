@@ -242,7 +242,7 @@ func TestMigrationDownAndUp_Integration(t *testing.T) {
 	}
 
 	// roll back one.
-	if err := avokadodb.MigrationDown(dbURL); err != nil {
+	if err = avokadodb.MigrationDown(dbURL); err != nil {
 		t.Fatalf("MigrationDown failed: %v", err)
 	}
 
@@ -254,7 +254,7 @@ func TestMigrationDownAndUp_Integration(t *testing.T) {
 	}
 
 	// re-apply.
-	if err := avokadodb.RunMigrations(dbURL); err != nil {
+	if err = avokadodb.RunMigrations(dbURL); err != nil {
 		t.Fatalf("RunMigrations (re-apply) failed: %v", err)
 	}
 
@@ -281,7 +281,7 @@ func TestMigrationForce_Integration(t *testing.T) {
 	}
 
 	// force to current version should not error.
-	if err := avokadodb.MigrationForce(dbURL, int(version)); err != nil {
+	if err = avokadodb.MigrationForce(dbURL, int(version)); err != nil {
 		t.Fatalf("MigrationForce failed: %v", err)
 	}
 

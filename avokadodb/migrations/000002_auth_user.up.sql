@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS auth_user (
     is_superuser BOOLEAN NOT NULL DEFAULT false,
     email_verified_at TIMESTAMPTZ,
     last_login TIMESTAMPTZ,
+    timezone TEXT CONSTRAINT auth_user_timezone_length CHECK (char_length(timezone) <= 50),
     provider TEXT NOT NULL DEFAULT 'local' CONSTRAINT auth_user_provider_length CHECK (char_length(provider) <= 50),
     provider_id TEXT CONSTRAINT auth_user_provider_id_length CHECK (char_length(provider_id) <= 255),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb
