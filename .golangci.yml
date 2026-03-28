@@ -1,0 +1,88 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  enable:
+    - bodyclose
+    - dupl
+    - errcheck
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nilerr
+    - nolintlint
+    - predeclared
+    - revive
+    - staticcheck
+    - thelper
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
+    - whitespace
+  settings:
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    govet:
+      enable:
+        - assign
+        - appends
+        - bools
+        - defers
+        - shadow
+        - unmarshal
+        - waitgroup
+        - lostcancel
+        - slog
+        - unreachable
+    gosec:
+      excludes:
+        - G117
+        - G118
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        - fmt.Fprintln
+        - fmt.Fprintf
+        - fmt.Fprint
+    revive:
+      enable-all-rules: true
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: cognitive-complexity
+          disabled: true
+        - name: cyclomatic
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: line-length-limit
+          disabled: true
+        - name: add-constant
+          arguments:
+            - max-lit-count: "10"
+              allow-strs: '"","%w",field'
+              allow-ints: "0,1,2,10,64"
+        - name: max-public-structs
+          arguments: [14]
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 120
