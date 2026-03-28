@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,7 +26,10 @@ var migrationsFS embed.FS
 // MigrationsFS exposes the embedded migration files for external use (e.g., CLI, testing).
 var MigrationsFS = migrationsFS
 
-const defaultMigrationsTable = "avokado"
+const (
+	defaultMigrationsTable = "avokado"
+	migrationFilePerms     = 0o600
+)
 
 func newMigrate(databaseURL string, migrationsTable string, migrationsDir fs.FS) (*migrate.Migrate, error) {
 	if migrationsTable == "" {
@@ -138,6 +143,22 @@ func MigrationVersion(
 	return ver, dirtyState, nil
 }
 
+// HasMigrations reports whether the given FS contains any .up.sql migration files.
+func HasMigrations(migrationsDir fs.FS) bool {
+	entries, err := fs.ReadDir(migrationsDir, "migrations")
+	if err != nil {
+		return false
+	}
+
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".up.sql") {
+			return true
+		}
+	}
+
+	return false
+}
+
 // MigrationInfo represents a single migration file and its applied state.
 type MigrationInfo struct {
 	Version uint
@@ -227,6 +248,65 @@ func ShowMigrations(w io.Writer, databaseURL, migrationsTable, appName string, m
 	}
 
 	fmt.Fprintln(w)
+
+	return nil
+}
+
+// AddMigration creates a new pair of migration files (up and down) in the given directory.
+// It auto-detects the next sequence number from existing files.
+// The migrationsPath must point to a "migrations" directory on disk.
+func AddMigration(migrationsPath string, name string) error {
+	if name == "" {
+		return avokadoerror.New("[avokadodb.AddMigration] err: empty migration name").
+			WithCode(avokadoerror.CodeInvalidParam)
+	}
+
+	var maxVersion uint64
+
+	entries, err := os.ReadDir(migrationsPath)
+	if err != nil {
+		return avokadoerror.New("[avokadodb.AddMigration os.ReadDir]: reading migrations dir").
+			WithCode(avokadoerror.CodeDatabaseError).
+			WithErr(err)
+	}
+
+	for _, e := range entries {
+		if !strings.HasSuffix(e.Name(), ".up.sql") {
+			continue
+		}
+
+		parts := strings.SplitN(e.Name(), "_", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		ver, err := strconv.ParseUint(parts[0], 10, 64)
+		if err != nil {
+			continue
+		}
+
+		if ver > maxVersion {
+			maxVersion = ver
+		}
+	}
+
+	nextVersion := maxVersion + 1
+	prefix := fmt.Sprintf("%06d_%s", nextVersion, name)
+
+	upPath := filepath.Join(migrationsPath, prefix+".up.sql")
+	downPath := filepath.Join(migrationsPath, prefix+".down.sql")
+
+	if err := os.WriteFile(upPath, []byte(""), migrationFilePerms); err != nil {
+		return avokadoerror.New("[avokadodb.AddMigration] err: creating up migration").
+			WithCode(avokadoerror.CodeDatabaseError).
+			WithErr(err)
+	}
+
+	if err := os.WriteFile(downPath, []byte(""), migrationFilePerms); err != nil {
+		return avokadoerror.New("[avokadodb.AddMigration] err: creating down migration").
+			WithCode(avokadoerror.CodeDatabaseError).
+			WithErr(err)
+	}
 
 	return nil
 }

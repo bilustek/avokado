@@ -215,6 +215,116 @@ func TestMigrationStatus_MalformedURL(t *testing.T) {
 	}
 }
 
+func TestHasMigrations_WithAvokadoFS(t *testing.T) {
+	if !avokadodb.HasMigrations(avokadodb.MigrationsFS) {
+		t.Error("expected HasMigrations to return true for avokado MigrationsFS")
+	}
+}
+
+func TestHasMigrations_EmptyFS(t *testing.T) {
+	emptyFS := os.DirFS(t.TempDir())
+	if avokadodb.HasMigrations(emptyFS) {
+		t.Error("expected HasMigrations to return false for empty FS")
+	}
+}
+
+func TestHasMigrations_NoSQLFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	migrationsDir := tmpDir + "/migrations"
+	if err := os.Mkdir(migrationsDir, 0o755); err != nil {
+		t.Fatalf("failed to create migrations dir: %v", err)
+	}
+
+	if err := os.WriteFile(migrationsDir+"/.keep", []byte{}, 0o644); err != nil {
+		t.Fatalf("failed to create .keep file: %v", err)
+	}
+
+	if avokadodb.HasMigrations(os.DirFS(tmpDir)) {
+		t.Error("expected HasMigrations to return false when no .up.sql files exist")
+	}
+}
+
+func TestAddMigration_EmptyName(t *testing.T) {
+	err := avokadodb.AddMigration(t.TempDir(), "")
+	if err == nil {
+		t.Fatal("expected error for empty migration name, got nil")
+	}
+}
+
+func TestAddMigration_InvalidPath(t *testing.T) {
+	err := avokadodb.AddMigration("/nonexistent/path", "create_foo")
+	if err == nil {
+		t.Fatal("expected error for invalid path, got nil")
+	}
+}
+
+func TestAddMigration_FirstMigration(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := avokadodb.AddMigration(dir, "create_users"); err != nil {
+		t.Fatalf("AddMigration failed: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir failed: %v", err)
+	}
+
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 files, got %d", len(entries))
+	}
+
+	expectedUp := "000001_create_users.up.sql"
+	expectedDown := "000001_create_users.down.sql"
+
+	names := make(map[string]bool)
+	for _, e := range entries {
+		names[e.Name()] = true
+	}
+
+	if !names[expectedUp] {
+		t.Errorf("expected file %s not found", expectedUp)
+	}
+
+	if !names[expectedDown] {
+		t.Errorf("expected file %s not found", expectedDown)
+	}
+}
+
+func TestAddMigration_SequentialNumbering(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := avokadodb.AddMigration(dir, "create_users"); err != nil {
+		t.Fatalf("AddMigration(1) failed: %v", err)
+	}
+
+	if err := avokadodb.AddMigration(dir, "create_posts"); err != nil {
+		t.Fatalf("AddMigration(2) failed: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir failed: %v", err)
+	}
+
+	if len(entries) != 4 {
+		t.Fatalf("expected 4 files, got %d", len(entries))
+	}
+
+	names := make(map[string]bool)
+	for _, e := range entries {
+		names[e.Name()] = true
+	}
+
+	if !names["000002_create_posts.up.sql"] {
+		t.Error("expected 000002_create_posts.up.sql not found")
+	}
+
+	if !names["000002_create_posts.down.sql"] {
+		t.Error("expected 000002_create_posts.down.sql not found")
+	}
+}
+
 // Integration tests — require DATABASE_URL env var (skipped otherwise).
 
 func TestMigrationVersion_NilVersion_Integration(t *testing.T) {
