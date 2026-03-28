@@ -43,14 +43,12 @@ func newMigrate(databaseURL string, migrationsTable string, migrationsDir fs.FS)
 	sourceDriver, err := iofs.New(migrationsDir, "migrations")
 	if err != nil {
 		return nil, avokadoerror.New("[avokadodb.newMigrate iofs.New]: migration source").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, avokadoerror.New("[avokadodb.newMigrate sql.Open]: database open").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
@@ -61,14 +59,12 @@ func newMigrate(databaseURL string, migrationsTable string, migrationsDir fs.FS)
 		_ = db.Close()
 
 		return nil, avokadoerror.New("[avokadodb.newMigrate postgres.WithInstance]: migration db driver").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
 	migrator, err := migrate.NewWithInstance("iofs", sourceDriver, "postgres", dbDriver)
 	if err != nil {
 		return nil, avokadoerror.New("[avokadodb.newMigrate migrate.NewWithInstance]: migration init").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
@@ -96,7 +92,7 @@ func RunMigrations(databaseURL string, migrationsTable string, migrationsDir fs.
 	defer closeMigrate(m)
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("avokadodb: migration up: %w", err)
+		return avokadoerror.New("[avokadodb.RunMigrations m.Up]: migration up").WithErr(err)
 	}
 
 	return nil
@@ -112,7 +108,7 @@ func MigrationDown(databaseURL string, migrationsTable string, migrationsDir fs.
 	defer closeMigrate(m)
 
 	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("avokadodb: migration down: %w", err)
+		return avokadoerror.New("[avokadodb.MigrationDown m.Down]: migration down").WithErr(err)
 	}
 
 	return nil
@@ -137,7 +133,7 @@ func MigrationVersion(
 			return 0, false, nil
 		}
 
-		return 0, false, fmt.Errorf("avokadodb: migration version: %w", err)
+		return 0, false, avokadoerror.New("[avokadodb.MigrationVersion m.Version]: migration version").WithErr(err)
 	}
 
 	return ver, dirtyState, nil
@@ -178,7 +174,6 @@ func MigrationStatus(databaseURL string, migrationsTable string, migrationsDir f
 	entries, err := fs.ReadDir(migrationsDir, "migrations")
 	if err != nil {
 		return nil, avokadoerror.New("[avokadodb.MigrationStatus fs.ReadDir]: reading migrations dir").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
@@ -257,8 +252,7 @@ func ShowMigrations(w io.Writer, databaseURL, migrationsTable, appName string, m
 // The migrationsPath must point to a "migrations" directory on disk.
 func AddMigration(migrationsPath string, name string) error {
 	if name == "" {
-		return avokadoerror.New("[avokadodb.AddMigration] err: empty migration name").
-			WithCode(avokadoerror.CodeInvalidParam)
+		return avokadoerror.New("[avokadodb.AddMigration] err: empty migration name")
 	}
 
 	var maxVersion uint64
@@ -266,7 +260,6 @@ func AddMigration(migrationsPath string, name string) error {
 	entries, err := os.ReadDir(migrationsPath)
 	if err != nil {
 		return avokadoerror.New("[avokadodb.AddMigration os.ReadDir]: reading migrations dir").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
@@ -298,13 +291,11 @@ func AddMigration(migrationsPath string, name string) error {
 
 	if err := os.WriteFile(upPath, []byte(""), migrationFilePerms); err != nil {
 		return avokadoerror.New("[avokadodb.AddMigration] err: creating up migration").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
 	if err := os.WriteFile(downPath, []byte(""), migrationFilePerms); err != nil {
 		return avokadoerror.New("[avokadodb.AddMigration] err: creating down migration").
-			WithCode(avokadoerror.CodeDatabaseError).
 			WithErr(err)
 	}
 
@@ -321,7 +312,7 @@ func MigrationForce(databaseURL string, version int, migrationsTable string, mig
 	defer closeMigrate(m)
 
 	if err := m.Force(version); err != nil {
-		return fmt.Errorf("avokadodb: migration force: %w", err)
+		return avokadoerror.New("[avokadodb.MigrationForce m.Force]: migration force").WithErr(err)
 	}
 
 	return nil

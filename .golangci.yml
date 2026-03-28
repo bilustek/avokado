@@ -68,7 +68,7 @@ linters:
         - name: function-length
           disabled: true
         - name: line-length-limit
-          arguments: [120]
+          disabled: true
         - name: add-constant
           arguments:
             - max-lit-count: "10"

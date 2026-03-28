@@ -4,9 +4,9 @@ package avokadodb
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/bilustek/avokado/avokadoerror"
@@ -55,8 +55,7 @@ type Option func(*config) error
 func WithDatabaseURL(url string) Option {
 	return func(c *config) error {
 		if url == "" {
-			return avokadoerror.New("[avokadodb.WithDatabaseURL] err: empty database url").
-				WithCode(avokadoerror.CodeInvalidParam)
+			return avokadoerror.New("[avokadodb.WithDatabaseURL] err: empty database url")
 		}
 
 		c.databaseURL = url
@@ -69,19 +68,21 @@ func WithDatabaseURL(url string) Option {
 func WithMaxOpenConns(n int) Option {
 	return func(c *config) error {
 		if n < minMaxOpenConns {
-			return fmt.Errorf(
-				"%w, '%d' received, must > %d",
-				avokadoerror.New("[avokadodb.WithMaxOpenConns] err:").WithCode(avokadoerror.CodeInvalidParam),
-				n,
-				minMaxOpenConns,
+			return avokadoerror.New(
+				"[avokadodb.WithMaxOpenConns] err: '" + strconv.Itoa(
+					n,
+				) + "' received, must > " + strconv.Itoa(
+					minMaxOpenConns,
+				),
 			)
 		}
 		if n > maxMaxOpenConns {
-			return fmt.Errorf(
-				"%w, '%d' received, must < %d",
-				avokadoerror.New("[avokadodb.WithMaxOpenConns] err:").WithCode(avokadoerror.CodeInvalidParam),
-				n,
-				maxMaxOpenConns,
+			return avokadoerror.New(
+				"[avokadodb.WithMaxOpenConns] err: '" + strconv.Itoa(
+					n,
+				) + "' received, must < " + strconv.Itoa(
+					maxMaxOpenConns,
+				),
 			)
 		}
 
@@ -95,19 +96,21 @@ func WithMaxOpenConns(n int) Option {
 func WithMaxIdleConns(n int) Option {
 	return func(c *config) error {
 		if n < minMaxIdleConns {
-			return fmt.Errorf(
-				"%w, '%d' received, must > %d",
-				avokadoerror.New("[avokadodb.WithMaxIdleConns] err:").WithCode(avokadoerror.CodeInvalidParam),
-				n,
-				minMaxIdleConns,
+			return avokadoerror.New(
+				"[avokadodb.WithMaxIdleConns] err: '" + strconv.Itoa(
+					n,
+				) + "' received, must > " + strconv.Itoa(
+					minMaxIdleConns,
+				),
 			)
 		}
 		if n > maxMaxIdleConns {
-			return fmt.Errorf(
-				"%w, '%d' received, must < %d",
-				avokadoerror.New("[avokadodb.WithMaxIdleConns] err:").WithCode(avokadoerror.CodeInvalidParam),
-				n,
-				maxMaxIdleConns,
+			return avokadoerror.New(
+				"[avokadodb.WithMaxIdleConns] err: '" + strconv.Itoa(
+					n,
+				) + "' received, must < " + strconv.Itoa(
+					maxMaxIdleConns,
+				),
 			)
 		}
 
@@ -121,20 +124,16 @@ func WithMaxIdleConns(n int) Option {
 func WithConnMaxLifetime(d time.Duration) Option {
 	return func(c *config) error {
 		if d < minConnMaxLifetime {
-			return fmt.Errorf(
-				"%w, '%s' received, must > %s",
-				avokadoerror.New("[avokadodb.WithConnMaxLifetime] err:").WithCode(avokadoerror.CodeInvalidParam),
-				d,
-				minConnMaxLifetime,
-			)
+			msg := "[avokadodb.WithConnMaxLifetime] err: '" +
+				d.String() + "' received, must > " + minConnMaxLifetime.String()
+
+			return avokadoerror.New(msg)
 		}
 		if d > maxConnMaxLifetime {
-			return fmt.Errorf(
-				"%w, '%s' received, must < %s",
-				avokadoerror.New("[avokadodb.WithConnMaxLifetime] err:").WithCode(avokadoerror.CodeInvalidParam),
-				d,
-				maxConnMaxLifetime,
-			)
+			msg := "[avokadodb.WithConnMaxLifetime] err: '" +
+				d.String() + "' received, must < " + maxConnMaxLifetime.String()
+
+			return avokadoerror.New(msg)
 		}
 
 		c.connMaxLifetime = d
@@ -147,20 +146,16 @@ func WithConnMaxLifetime(d time.Duration) Option {
 func WithConnMaxIdleTime(d time.Duration) Option {
 	return func(c *config) error {
 		if d < minConnMaxIdleTime {
-			return fmt.Errorf(
-				"%w, '%s' received, must > %s",
-				avokadoerror.New("[avokadodb.WithConnMaxIdleTime] err:").WithCode(avokadoerror.CodeInvalidParam),
-				d,
-				minConnMaxIdleTime,
-			)
+			msg := "[avokadodb.WithConnMaxIdleTime] err: '" +
+				d.String() + "' received, must > " + minConnMaxIdleTime.String()
+
+			return avokadoerror.New(msg)
 		}
 		if d > maxConnMaxIdleTime {
-			return fmt.Errorf(
-				"%w, '%s' received, must < %s",
-				avokadoerror.New("[avokadodb.WithConnMaxIdleTime] err:").WithCode(avokadoerror.CodeInvalidParam),
-				d,
-				maxConnMaxIdleTime,
-			)
+			msg := "[avokadodb.WithConnMaxIdleTime] err: '" +
+				d.String() + "' received, must < " + maxConnMaxIdleTime.String()
+
+			return avokadoerror.New(msg)
 		}
 
 		c.connMaxIdleTime = d
@@ -173,19 +168,13 @@ func WithConnMaxIdleTime(d time.Duration) Option {
 func WithPingTimeout(d time.Duration) Option {
 	return func(c *config) error {
 		if d < minPingTimeout {
-			return fmt.Errorf(
-				"%w, '%s' received, must > %s",
-				avokadoerror.New("[avokadodb.WithPingTimeout] err:").WithCode(avokadoerror.CodeInvalidParam),
-				d,
-				minPingTimeout,
+			return avokadoerror.New(
+				"[avokadodb.WithPingTimeout] err: '" + d.String() + "' received, must > " + minPingTimeout.String(),
 			)
 		}
 		if d > maxPingTimeout {
-			return fmt.Errorf(
-				"%w, '%s' received, must < %s",
-				avokadoerror.New("[avokadodb.WithPingTimeout] err:").WithCode(avokadoerror.CodeInvalidParam),
-				d,
-				maxPingTimeout,
+			return avokadoerror.New(
+				"[avokadodb.WithPingTimeout] err: '" + d.String() + "' received, must < " + maxPingTimeout.String(),
 			)
 		}
 
@@ -218,20 +207,22 @@ func WithGormConfig(gcf *gorm.Config) Option {
 func WithGormLogLevel(n int) Option {
 	return func(c *config) error {
 		if n < int(gormlogger.Silent) {
-			return fmt.Errorf(
-				"%w, '%d' received, must > %d",
-				avokadoerror.New("[avokadodb.WithGormLogLevel] err:").WithCode(avokadoerror.CodeInvalidParam),
-				n,
-				gormlogger.Silent,
+			return avokadoerror.New(
+				"[avokadodb.WithGormLogLevel] err: '" + strconv.Itoa(
+					n,
+				) + "' received, must > " + strconv.Itoa(
+					int(gormlogger.Silent),
+				),
 			)
 		}
 
 		if n > int(gormlogger.Info) {
-			return fmt.Errorf(
-				"%w, '%d' received, must < %d",
-				avokadoerror.New("[avokadodb.WithGormLogLevel] err:").WithCode(avokadoerror.CodeInvalidParam),
-				n,
-				gormlogger.Info,
+			return avokadoerror.New(
+				"[avokadodb.WithGormLogLevel] err: '" + strconv.Itoa(
+					n,
+				) + "' received, must < " + strconv.Itoa(
+					int(gormlogger.Info),
+				),
 			)
 		}
 
@@ -259,8 +250,7 @@ func New(ctx context.Context, opts ...Option) (*gorm.DB, error) {
 	}
 
 	if cfg.databaseURL == "" {
-		return nil, avokadoerror.New("[avokadodb.New] err: databaseURL required").
-			WithCode(avokadoerror.CodeInvalidParam)
+		return nil, avokadoerror.New("[avokadodb.New] err: databaseURL required")
 	}
 
 	if cfg.logger == nil {
@@ -292,11 +282,11 @@ func New(ctx context.Context, opts ...Option) (*gorm.DB, error) {
 
 	db, dbErr := gorm.Open(postgres.New(pgConfig), cfg.gormConfig)
 	if dbErr != nil {
-		return nil, fmt.Errorf("[avokadodb.New gorm.Open] err: %w", dbErr)
+		return nil, avokadoerror.New("[avokadodb.New gorm.Open] err").WithErr(dbErr)
 	}
 	sqlDB, sqlDBErr := db.DB()
 	if sqlDBErr != nil {
-		return nil, fmt.Errorf("[avokadodb.New sqlDB] err: %w", sqlDBErr)
+		return nil, avokadoerror.New("[avokadodb.New sqlDB] err").WithErr(sqlDBErr)
 	}
 
 	sqlDB.SetMaxOpenConns(cfg.maxOpenConns)
@@ -308,7 +298,7 @@ func New(ctx context.Context, opts ...Option) (*gorm.DB, error) {
 	defer cancel()
 
 	if err := sqlDB.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("[avokadodb.New sqlDB.PingContext] err: %w", err)
+		return nil, avokadoerror.New("[avokadodb.New sqlDB.PingContext] err").WithErr(err)
 	}
 
 	return db, nil

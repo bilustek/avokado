@@ -298,8 +298,9 @@ func TestNew_OptionError(t *testing.T) {
 }
 
 // isOptionError checks if the error is from option validation (not from DB connection).
+// Option validation errors have no wrapped inner error, while DB connection errors do.
 func isOptionError(err error) bool {
 	var avoErr *avokadoerror.Error
 
-	return errors.As(err, &avoErr)
+	return errors.As(err, &avoErr) && avoErr.Err == nil
 }

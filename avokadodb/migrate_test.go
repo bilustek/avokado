@@ -138,10 +138,6 @@ func TestRunMigrations_MalformedURL(t *testing.T) {
 	if !errors.As(err, &avErr) {
 		t.Fatalf("expected *avokadoerror.Error, got %T", err)
 	}
-
-	if avErr.Code != avokadoerror.CodeDatabaseError {
-		t.Errorf("expected error code %q, got %q", avokadoerror.CodeDatabaseError, avErr.Code)
-	}
 }
 
 func TestMigrationDown_MalformedURL(t *testing.T) {
@@ -153,10 +149,6 @@ func TestMigrationDown_MalformedURL(t *testing.T) {
 	var avErr *avokadoerror.Error
 	if !errors.As(err, &avErr) {
 		t.Fatalf("expected *avokadoerror.Error, got %T", err)
-	}
-
-	if avErr.Code != avokadoerror.CodeDatabaseError {
-		t.Errorf("expected error code %q, got %q", avokadoerror.CodeDatabaseError, avErr.Code)
 	}
 }
 
@@ -170,10 +162,6 @@ func TestMigrationVersion_MalformedURL(t *testing.T) {
 	if !errors.As(err, &avErr) {
 		t.Fatalf("expected *avokadoerror.Error, got %T", err)
 	}
-
-	if avErr.Code != avokadoerror.CodeDatabaseError {
-		t.Errorf("expected error code %q, got %q", avokadoerror.CodeDatabaseError, avErr.Code)
-	}
 }
 
 func TestMigrationForce_MalformedURL(t *testing.T) {
@@ -185,10 +173,6 @@ func TestMigrationForce_MalformedURL(t *testing.T) {
 	var avErr *avokadoerror.Error
 	if !errors.As(err, &avErr) {
 		t.Fatalf("expected *avokadoerror.Error, got %T", err)
-	}
-
-	if avErr.Code != avokadoerror.CodeDatabaseError {
-		t.Errorf("expected error code %q, got %q", avokadoerror.CodeDatabaseError, avErr.Code)
 	}
 }
 
@@ -208,10 +192,6 @@ func TestMigrationStatus_MalformedURL(t *testing.T) {
 	var avErr *avokadoerror.Error
 	if !errors.As(err, &avErr) {
 		t.Fatalf("expected *avokadoerror.Error, got %T", err)
-	}
-
-	if avErr.Code != avokadoerror.CodeDatabaseError {
-		t.Errorf("expected error code %q, got %q", avokadoerror.CodeDatabaseError, avErr.Code)
 	}
 }
 
