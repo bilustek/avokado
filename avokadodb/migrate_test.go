@@ -221,12 +221,8 @@ func TestMigrationVersion_NilVersion_Integration(t *testing.T) {
 	dbURL := testDatabaseURL(t)
 
 	// roll back everything to get a clean state.
-	for {
-		err := avokadodb.MigrationDown(dbURL, "", nil)
-		if err != nil {
-			break
-		}
-	}
+	// MigrationDown calls m.Down() which rolls back all migrations at once.
+	_ = avokadodb.MigrationDown(dbURL, "", nil)
 
 	// no migrations applied — should return version 0, no error.
 	version, dirty, err := avokadodb.MigrationVersion(dbURL, "", nil)
