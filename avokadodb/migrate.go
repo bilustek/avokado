@@ -5,7 +5,12 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"log"
+	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/golang-migrate/migrate/v4"
@@ -19,10 +24,18 @@ var migrationsFS embed.FS
 // MigrationsFS exposes the embedded migration files for external use (e.g., CLI, testing).
 var MigrationsFS = migrationsFS
 
-const migrationsTable = "avokado"
+const defaultMigrationsTable = "avokado"
 
-func newMigrate(databaseURL string) (*migrate.Migrate, error) {
-	sourceDriver, err := iofs.New(migrationsFS, "migrations")
+func newMigrate(databaseURL string, migrationsTable string, migrationsDir fs.FS) (*migrate.Migrate, error) {
+	if migrationsTable == "" {
+		migrationsTable = defaultMigrationsTable
+	}
+
+	if migrationsDir == nil {
+		migrationsDir = migrationsFS
+	}
+
+	sourceDriver, err := iofs.New(migrationsDir, "migrations")
 	if err != nil {
 		return nil, avokadoerror.New("[avokadodb.newMigrate iofs.New]: migration source").
 			WithCode(avokadoerror.CodeDatabaseError).
@@ -70,8 +83,8 @@ func closeMigrate(m *migrate.Migrate) {
 
 // RunMigrations runs all pending migrations against the given database URL.
 // It returns nil if all migrations ran successfully or if there are no new migrations.
-func RunMigrations(databaseURL string) error {
-	m, err := newMigrate(databaseURL)
+func RunMigrations(databaseURL string, migrationsTable string, migrationsDir fs.FS) error {
+	m, err := newMigrate(databaseURL, migrationsTable, migrationsDir)
 	if err != nil {
 		return err
 	}
@@ -86,8 +99,8 @@ func RunMigrations(databaseURL string) error {
 
 // MigrationDown rolls back the last applied migration.
 // It returns nil if the rollback was successful or if there are no migrations to roll back.
-func MigrationDown(databaseURL string) error {
-	m, err := newMigrate(databaseURL)
+func MigrationDown(databaseURL string, migrationsTable string, migrationsDir fs.FS) error {
+	m, err := newMigrate(databaseURL, migrationsTable, migrationsDir)
 	if err != nil {
 		return err
 	}
@@ -102,8 +115,12 @@ func MigrationDown(databaseURL string) error {
 
 // MigrationVersion returns the current migration version and dirty state.
 // Returns version 0 with nil error if no migrations have been applied yet.
-func MigrationVersion(databaseURL string) (version uint, dirty bool, err error) {
-	m, err := newMigrate(databaseURL)
+func MigrationVersion(
+	databaseURL string,
+	migrationsTable string,
+	migrationsDir fs.FS,
+) (version uint, dirty bool, err error) {
+	m, err := newMigrate(databaseURL, migrationsTable, migrationsDir)
 	if err != nil {
 		return 0, false, err
 	}
@@ -121,10 +138,103 @@ func MigrationVersion(databaseURL string) (version uint, dirty bool, err error) 
 	return ver, dirtyState, nil
 }
 
+// MigrationInfo represents a single migration file and its applied state.
+type MigrationInfo struct {
+	Version uint
+	Name    string
+	Applied bool
+}
+
+// MigrationStatus lists all available migrations and marks which ones have been applied.
+// It reads .up.sql files from the given migrationsDir FS and compares against the current version.
+// The migrationsDir must contain a "migrations" subdirectory with .up.sql/.down.sql files.
+func MigrationStatus(databaseURL string, migrationsTable string, migrationsDir fs.FS) ([]MigrationInfo, error) {
+	currentVersion, _, err := MigrationVersion(databaseURL, migrationsTable, migrationsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := fs.ReadDir(migrationsDir, "migrations")
+	if err != nil {
+		return nil, avokadoerror.New("[avokadodb.MigrationStatus fs.ReadDir]: reading migrations dir").
+			WithCode(avokadoerror.CodeDatabaseError).
+			WithErr(err)
+	}
+
+	var migrations []MigrationInfo
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".up.sql") {
+			continue
+		}
+
+		parts := strings.SplitN(name, "_", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		ver, err := strconv.ParseUint(parts[0], 10, 64)
+		if err != nil {
+			continue
+		}
+
+		migName := strings.TrimSuffix(parts[1], ".up.sql")
+
+		migrations = append(migrations, MigrationInfo{
+			Version: uint(ver),
+			Name:    fmt.Sprintf("%s_%s", parts[0], migName),
+			Applied: ver <= uint64(currentVersion) && currentVersion > 0,
+		})
+	}
+
+	slices.SortFunc(migrations, func(a, b MigrationInfo) int {
+		switch {
+		case a.Version < b.Version:
+			return -1
+		case a.Version > b.Version:
+			return 1
+		default:
+			return 0
+		}
+	})
+
+	return migrations, nil
+}
+
+// ShowMigrations prints a formatted migration status report to the given writer.
+// It displays the app name, current version, dirty state, and a checklist of all migrations.
+func ShowMigrations(w io.Writer, databaseURL, migrationsTable, appName string, migrationsDir fs.FS) error {
+	version, dirty, err := MigrationVersion(databaseURL, migrationsTable, migrationsDir)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(w, "%s, version: %d, dirty?: %t\n\n", appName, version, dirty)
+
+	migrations, err := MigrationStatus(databaseURL, migrationsTable, migrationsDir)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range migrations {
+		mark := " "
+		if m.Applied {
+			mark = "X"
+		}
+
+		fmt.Fprintf(w, "  [%s] - %s\n", mark, m.Name)
+	}
+
+	fmt.Fprintln(w)
+
+	return nil
+}
+
 // MigrationForce forces the migration version, clearing the dirty state.
 // This is used to fix a dirty database state after a failed migration.
-func MigrationForce(databaseURL string, version int) error {
-	m, err := newMigrate(databaseURL)
+func MigrationForce(databaseURL string, version int, migrationsTable string, migrationsDir fs.FS) error {
+	m, err := newMigrate(databaseURL, migrationsTable, migrationsDir)
 	if err != nil {
 		return err
 	}
