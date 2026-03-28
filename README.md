@@ -16,6 +16,29 @@ Quick rest api server genarator (Django inspired!) for nerds! Batteries included
 - [PostgreSQL](https://www.postgresql.org/)
 - [Gorm](https://gorm.io/)
 - [Golang Migrate](https://github.com/golang-migrate/migrate/)
+- [Scalar](https://scalar.com/)
+
+## Features
+
+- Django style migrations, extend your models from `BaseModel`
+- Django style User, Group, Permission approach.
+- Django style User register, confirm, change password approach
+- Django style admin endpoints
+- Sign-in With Google (provider based authentication)
+- Sign-in With Password (password based authentication)
+- Slack, Email or console backends based on environment *
+- OpenAPI 3.0 specification and Scalar UI
+- Ruby on Rails style **strong params** implementation
+
+## Built-in Models
+
+- `auth_user`
+- `auth_group`
+- `auth_permission`
+- `auth_user_groups`
+- `auth_user_permissions`
+- `auth_group_permissions`
+- `refresh_token`
 
 @wip
 
