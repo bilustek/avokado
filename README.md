@@ -35,7 +35,22 @@ Quick rest api server genarator (Django inspired!) for nerds! Batteries included
 
 ## Usage
 
-@wip
+### Management Commands
+
+- `showmigrations`
+- `makemigrations`
+- `migrate`
+
+```bash
+go run ./cmd/management/showmigrations/
+go run ./cmd/management/showmigrations/ -h
+
+go run ./cmd/management/makemigrations/ -h
+go run ./cmd/management/makemigrations/ --name "<name-of-your-migration>"
+
+go run ./cmd/management/migrate/ -h
+go run ./cmd/management/migrate/
+```
 
 ---
 
