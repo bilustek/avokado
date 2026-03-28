@@ -8,7 +8,7 @@
 
 # avokado
 
-Quick rest api server genarator (Django inspired!) for nerds! Batteries included:
+Quick rest api server genarator ([Django](https://www.djangoproject.com/) inspired!) for nerds! Batteries included:
 
 - [Fiber V3](https://github.com/gofiber/fiber)
 - [Sentry](https://github.com/getsentry/sentry-go)
