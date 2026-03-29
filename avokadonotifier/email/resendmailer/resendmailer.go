@@ -47,6 +47,10 @@ func (r *Resend) SendAsync(ctx context.Context, request *avokadonotifier.EmailSe
 // WithAPIKey sets the Resend API key.
 func WithAPIKey(apiKey string) Option {
 	return func(r *Resend) error {
+		if apiKey == "" {
+			return avokadoerror.New("[resendmailer.WithAPIKey] apiKey must not be empty")
+		}
+
 		r.client = resend.NewClient(apiKey)
 
 		return nil
@@ -56,6 +60,13 @@ func WithAPIKey(apiKey string) Option {
 // WithHTTPClient sets a custom HTTP client for the Resend API (useful for testing).
 func WithHTTPClient(apiKey string, httpClient *http.Client) Option {
 	return func(r *Resend) error {
+		if apiKey == "" {
+			return avokadoerror.New("[resendmailer.WithHTTPClient] apiKey must not be empty")
+		}
+		if httpClient == nil {
+			return avokadoerror.New("[resendmailer.WithHTTPClient] httpClient must not be nil")
+		}
+
 		r.client = resend.NewCustomClient(httpClient, apiKey)
 
 		return nil

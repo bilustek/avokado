@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/email/resendmailer"
@@ -37,6 +36,34 @@ func TestNew_WithoutLogger_ReturnsError(t *testing.T) {
 
 	if _, err := resendmailer.New(resendmailer.WithAPIKey("re_test_123")); err == nil {
 		t.Fatal("expected error when no logger provided")
+	}
+}
+
+func TestWithAPIKey_Empty_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := resendmailer.New(resendmailer.WithAPIKey("")); err == nil {
+		t.Fatal("expected error for empty API key")
+	}
+}
+
+func TestWithHTTPClient_EmptyAPIKey_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := resendmailer.New(
+		resendmailer.WithHTTPClient("", &http.Client{}),
+	); err == nil {
+		t.Fatal("expected error for empty API key")
+	}
+}
+
+func TestWithHTTPClient_NilClient_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := resendmailer.New(
+		resendmailer.WithHTTPClient("re_test_123", nil),
+	); err == nil {
+		t.Fatal("expected error for nil HTTP client")
 	}
 }
 
@@ -123,7 +150,11 @@ func TestSend_APIError(t *testing.T) {
 func TestSendAsync(t *testing.T) {
 	t.Parallel()
 
+	done := make(chan struct{})
+
 	client := mockClient(func(_ *http.Request) (*http.Response, error) {
+		defer close(done)
+
 		resp := map[string]string{"id": "async-id"}
 		body, _ := json.Marshal(resp)
 
@@ -150,5 +181,5 @@ func TestSendAsync(t *testing.T) {
 	}
 
 	r.SendAsync(context.Background(), request)
-	time.Sleep(100 * time.Millisecond)
+	<-done
 }

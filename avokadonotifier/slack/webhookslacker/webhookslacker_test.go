@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier/slack/webhookslacker"
 )
@@ -218,10 +217,10 @@ func TestNew_DefaultHTTPClient(t *testing.T) {
 func TestNotifyAsync(t *testing.T) {
 	t.Parallel()
 
-	var called atomic.Bool
+	done := make(chan struct{})
 
 	client := mockClient(func(_ *http.Request) (*http.Response, error) {
-		called.Store(true)
+		defer close(done)
 
 		return &http.Response{
 			StatusCode: http.StatusOK,
@@ -238,11 +237,7 @@ func TestNotifyAsync(t *testing.T) {
 	}
 
 	w.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
-	time.Sleep(100 * time.Millisecond)
-
-	if !called.Load() {
-		t.Error("expected HTTP request to be made")
-	}
+	<-done
 }
 
 func TestNotify_NetworkError_Retries(t *testing.T) {

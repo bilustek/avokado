@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"strings"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/email/consolemailer"
@@ -17,6 +16,43 @@ type failWriter struct{}
 
 func (failWriter) Write(_ []byte) (int, error) {
 	return 0, errors.New("write failed")
+}
+
+type notifyWriter struct {
+	mu   sync.Mutex
+	buf  bytes.Buffer
+	done chan struct{}
+	seen string
+}
+
+func newNotifyWriter(marker string) *notifyWriter {
+	return &notifyWriter{
+		done: make(chan struct{}),
+		seen: marker,
+	}
+}
+
+func (w *notifyWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	n, err := w.buf.Write(p)
+	if strings.Contains(w.buf.String(), w.seen) {
+		select {
+		case <-w.done:
+		default:
+			close(w.done)
+		}
+	}
+
+	return n, err
+}
+
+func (w *notifyWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.buf.String()
 }
 
 func TestConsoleSend_PlainText(t *testing.T) {
@@ -137,8 +173,8 @@ func TestConsoleSend_WriterError(t *testing.T) {
 func TestConsoleSendAsync(t *testing.T) {
 	t.Parallel()
 
-	r, w := io.Pipe()
-	c := consolemailer.New(consolemailer.WithWriter(w))
+	nw := newNotifyWriter("async body")
+	c := consolemailer.New(consolemailer.WithWriter(nw))
 
 	request := &avokadonotifier.EmailSenderRequest{
 		From:    "sender@example.com",
@@ -147,22 +183,10 @@ func TestConsoleSendAsync(t *testing.T) {
 		Text:    "async body",
 	}
 
-	done := make(chan string)
-
-	go func() {
-		var buf bytes.Buffer
-
-		_, _ = io.Copy(&buf, r)
-
-		done <- buf.String()
-	}()
-
 	c.SendAsync(context.Background(), request)
-	time.Sleep(50 * time.Millisecond)
-	_ = w.Close()
+	<-nw.done
 
-	output := <-done
-	if !strings.Contains(output, "async body") {
+	if !strings.Contains(nw.String(), "async body") {
 		t.Error("expected output to contain body text")
 	}
 }

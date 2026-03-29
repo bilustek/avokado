@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"strings"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier/slack/consoleslacker"
 )
@@ -16,6 +15,43 @@ type failWriter struct{}
 
 func (failWriter) Write(_ []byte) (int, error) {
 	return 0, errors.New("write failed")
+}
+
+type notifyWriter struct {
+	mu   sync.Mutex
+	buf  bytes.Buffer
+	done chan struct{}
+	seen string
+}
+
+func newNotifyWriter(marker string) *notifyWriter {
+	return &notifyWriter{
+		done: make(chan struct{}),
+		seen: marker,
+	}
+}
+
+func (w *notifyWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	n, err := w.buf.Write(p)
+	if strings.Contains(w.buf.String(), w.seen) {
+		select {
+		case <-w.done:
+		default:
+			close(w.done)
+		}
+	}
+
+	return n, err
+}
+
+func (w *notifyWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.buf.String()
 }
 
 func TestConsoleNotify(t *testing.T) {
@@ -56,25 +92,13 @@ func TestConsoleNotify_WriterError(t *testing.T) {
 func TestConsoleNotifyAsync(t *testing.T) {
 	t.Parallel()
 
-	r, w := io.Pipe()
-	c := consoleslacker.New(consoleslacker.WithWriter(w))
-
-	done := make(chan string)
-
-	go func() {
-		var buf bytes.Buffer
-
-		_, _ = io.Copy(&buf, r)
-
-		done <- buf.String()
-	}()
+	nw := newNotifyWriter("async msg")
+	c := consoleslacker.New(consoleslacker.WithWriter(nw))
 
 	c.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
-	time.Sleep(50 * time.Millisecond)
-	_ = w.Close()
+	<-nw.done
 
-	output := <-done
-	if !strings.Contains(output, "async msg") {
+	if !strings.Contains(nw.String(), "async msg") {
 		t.Error("expected output to contain message")
 	}
 }
