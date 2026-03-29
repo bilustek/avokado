@@ -71,7 +71,7 @@ func TestConsoleNotifyAsync(t *testing.T) {
 
 	c.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
 	time.Sleep(50 * time.Millisecond)
-	w.Close()
+	_ = w.Close()
 
 	output := <-done
 	if !strings.Contains(output, "async msg") {

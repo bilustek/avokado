@@ -159,7 +159,7 @@ func TestConsoleSendAsync(t *testing.T) {
 
 	c.SendAsync(context.Background(), request)
 	time.Sleep(50 * time.Millisecond)
-	w.Close()
+	_ = w.Close()
 
 	output := <-done
 	if !strings.Contains(output, "async body") {
