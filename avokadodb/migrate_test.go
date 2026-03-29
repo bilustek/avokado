@@ -1,0 +1,438 @@
+package avokadodb_test
+
+import (
+	"errors"
+	"io/fs"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/bilustek/avokado/avokadodb"
+	"github.com/bilustek/avokado/avokadoerror"
+)
+
+func testDatabaseURL(t *testing.T) string {
+	t.Helper()
+
+	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		t.Skip("DATABASE_URL not set, skipping integration test")
+	}
+
+	return url
+}
+
+func TestRunMigrations_RequiresValidURL(t *testing.T) {
+	err := avokadodb.RunMigrations("", "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty database URL, got nil")
+	}
+}
+
+func TestMigrationDown_RequiresValidURL(t *testing.T) {
+	err := avokadodb.MigrationDown("", "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty database URL, got nil")
+	}
+}
+
+func TestMigrationVersion_RequiresValidURL(t *testing.T) {
+	_, _, err := avokadodb.MigrationVersion("", "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty database URL, got nil")
+	}
+}
+
+func TestMigrationForce_RequiresValidURL(t *testing.T) {
+	err := avokadodb.MigrationForce("", 1, "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty database URL, got nil")
+	}
+}
+
+func TestMigrationsFS_ContainsMigrationFiles(t *testing.T) {
+	entries, err := fs.ReadDir(avokadodb.MigrationsFS, "migrations")
+	if err != nil {
+		t.Fatalf("failed to read embedded migrations dir: %v", err)
+	}
+
+	if len(entries) == 0 {
+		t.Fatal("expected embedded migration files, got none")
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			t.Errorf("unexpected directory in migrations: %s", entry.Name())
+		}
+
+		if !strings.HasSuffix(entry.Name(), ".sql") {
+			t.Errorf("unexpected non-SQL file in migrations: %s", entry.Name())
+		}
+	}
+}
+
+func TestMigrationsFS_UpDownPairsMatch(t *testing.T) {
+	entries, err := fs.ReadDir(avokadodb.MigrationsFS, "migrations")
+	if err != nil {
+		t.Fatalf("failed to read embedded migrations dir: %v", err)
+	}
+
+	ups := make(map[string]bool)
+	downs := make(map[string]bool)
+
+	for _, entry := range entries {
+		name := entry.Name()
+
+		switch {
+		case strings.Contains(name, ".up.sql"):
+			prefix := strings.SplitN(name, ".up.sql", 2)[0]
+			ups[prefix] = true
+		case strings.Contains(name, ".down.sql"):
+			prefix := strings.SplitN(name, ".down.sql", 2)[0]
+			downs[prefix] = true
+		default:
+			t.Errorf("migration file %q doesn't match .up.sql or .down.sql pattern", name)
+		}
+	}
+
+	for prefix := range ups {
+		if !downs[prefix] {
+			t.Errorf("migration %q has .up.sql but missing .down.sql", prefix)
+		}
+	}
+
+	for prefix := range downs {
+		if !ups[prefix] {
+			t.Errorf("migration %q has .down.sql but missing .up.sql", prefix)
+		}
+	}
+}
+
+func TestMigrationsFS_FilesAreNotEmpty(t *testing.T) {
+	entries, err := fs.ReadDir(avokadodb.MigrationsFS, "migrations")
+	if err != nil {
+		t.Fatalf("failed to read embedded migrations dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		content, err := fs.ReadFile(avokadodb.MigrationsFS, "migrations/"+entry.Name())
+		if err != nil {
+			t.Errorf("failed to read migration file %s: %v", entry.Name(), err)
+
+			continue
+		}
+
+		if len(strings.TrimSpace(string(content))) == 0 {
+			t.Errorf("migration file %s is empty", entry.Name())
+		}
+	}
+}
+
+func TestRunMigrations_MalformedURL(t *testing.T) {
+	err := avokadodb.RunMigrations("not-a-valid-url", "", nil)
+	if err == nil {
+		t.Fatal("expected error for malformed database URL, got nil")
+	}
+
+	var avErr *avokadoerror.Error
+	if !errors.As(err, &avErr) {
+		t.Fatalf("expected *avokadoerror.Error, got %T", err)
+	}
+}
+
+func TestMigrationDown_MalformedURL(t *testing.T) {
+	err := avokadodb.MigrationDown("not-a-valid-url", "", nil)
+	if err == nil {
+		t.Fatal("expected error for malformed database URL, got nil")
+	}
+
+	var avErr *avokadoerror.Error
+	if !errors.As(err, &avErr) {
+		t.Fatalf("expected *avokadoerror.Error, got %T", err)
+	}
+}
+
+func TestMigrationVersion_MalformedURL(t *testing.T) {
+	_, _, err := avokadodb.MigrationVersion("not-a-valid-url", "", nil)
+	if err == nil {
+		t.Fatal("expected error for malformed database URL, got nil")
+	}
+
+	var avErr *avokadoerror.Error
+	if !errors.As(err, &avErr) {
+		t.Fatalf("expected *avokadoerror.Error, got %T", err)
+	}
+}
+
+func TestMigrationForce_MalformedURL(t *testing.T) {
+	err := avokadodb.MigrationForce("not-a-valid-url", 1, "", nil)
+	if err == nil {
+		t.Fatal("expected error for malformed database URL, got nil")
+	}
+
+	var avErr *avokadoerror.Error
+	if !errors.As(err, &avErr) {
+		t.Fatalf("expected *avokadoerror.Error, got %T", err)
+	}
+}
+
+func TestMigrationStatus_RequiresValidURL(t *testing.T) {
+	_, err := avokadodb.MigrationStatus("", "", avokadodb.MigrationsFS)
+	if err == nil {
+		t.Fatal("expected error for empty database URL, got nil")
+	}
+}
+
+func TestMigrationStatus_MalformedURL(t *testing.T) {
+	_, err := avokadodb.MigrationStatus("not-a-valid-url", "", avokadodb.MigrationsFS)
+	if err == nil {
+		t.Fatal("expected error for malformed database URL, got nil")
+	}
+
+	var avErr *avokadoerror.Error
+	if !errors.As(err, &avErr) {
+		t.Fatalf("expected *avokadoerror.Error, got %T", err)
+	}
+}
+
+func TestHasMigrations_WithAvokadoFS(t *testing.T) {
+	if !avokadodb.HasMigrations(avokadodb.MigrationsFS) {
+		t.Error("expected HasMigrations to return true for avokado MigrationsFS")
+	}
+}
+
+func TestHasMigrations_EmptyFS(t *testing.T) {
+	emptyFS := os.DirFS(t.TempDir())
+	if avokadodb.HasMigrations(emptyFS) {
+		t.Error("expected HasMigrations to return false for empty FS")
+	}
+}
+
+func TestHasMigrations_NoSQLFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	migrationsDir := tmpDir + "/migrations"
+	if err := os.Mkdir(migrationsDir, 0o755); err != nil {
+		t.Fatalf("failed to create migrations dir: %v", err)
+	}
+
+	if err := os.WriteFile(migrationsDir+"/.keep", []byte{}, 0o644); err != nil {
+		t.Fatalf("failed to create .keep file: %v", err)
+	}
+
+	if avokadodb.HasMigrations(os.DirFS(tmpDir)) {
+		t.Error("expected HasMigrations to return false when no .up.sql files exist")
+	}
+}
+
+func TestAddMigration_EmptyName(t *testing.T) {
+	err := avokadodb.AddMigration(t.TempDir(), "")
+	if err == nil {
+		t.Fatal("expected error for empty migration name, got nil")
+	}
+}
+
+func TestAddMigration_InvalidPath(t *testing.T) {
+	err := avokadodb.AddMigration("/nonexistent/path", "create_foo")
+	if err == nil {
+		t.Fatal("expected error for invalid path, got nil")
+	}
+}
+
+func TestAddMigration_FirstMigration(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := avokadodb.AddMigration(dir, "create_users"); err != nil {
+		t.Fatalf("AddMigration failed: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir failed: %v", err)
+	}
+
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 files, got %d", len(entries))
+	}
+
+	expectedUp := "000001_create_users.up.sql"
+	expectedDown := "000001_create_users.down.sql"
+
+	names := make(map[string]bool)
+	for _, e := range entries {
+		names[e.Name()] = true
+	}
+
+	if !names[expectedUp] {
+		t.Errorf("expected file %s not found", expectedUp)
+	}
+
+	if !names[expectedDown] {
+		t.Errorf("expected file %s not found", expectedDown)
+	}
+}
+
+func TestAddMigration_SequentialNumbering(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := avokadodb.AddMigration(dir, "create_users"); err != nil {
+		t.Fatalf("AddMigration(1) failed: %v", err)
+	}
+
+	if err := avokadodb.AddMigration(dir, "create_posts"); err != nil {
+		t.Fatalf("AddMigration(2) failed: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir failed: %v", err)
+	}
+
+	if len(entries) != 4 {
+		t.Fatalf("expected 4 files, got %d", len(entries))
+	}
+
+	names := make(map[string]bool)
+	for _, e := range entries {
+		names[e.Name()] = true
+	}
+
+	if !names["000002_create_posts.up.sql"] {
+		t.Error("expected 000002_create_posts.up.sql not found")
+	}
+
+	if !names["000002_create_posts.down.sql"] {
+		t.Error("expected 000002_create_posts.down.sql not found")
+	}
+}
+
+// Integration tests — require DATABASE_URL env var (skipped otherwise).
+
+func TestMigrationVersion_NilVersion_Integration(t *testing.T) {
+	dbURL := testDatabaseURL(t)
+
+	// roll back everything to get a clean state.
+	// MigrationDown calls m.Down() which rolls back all migrations at once.
+	_ = avokadodb.MigrationDown(dbURL, "", nil)
+
+	// no migrations applied — should return version 0, no error.
+	version, dirty, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("expected nil error for ErrNilVersion, got: %v", err)
+	}
+
+	if version != 0 {
+		t.Errorf("expected version 0, got %d", version)
+	}
+
+	if dirty {
+		t.Error("expected dirty to be false")
+	}
+}
+
+func TestRunMigrations_Integration(t *testing.T) {
+	dbURL := testDatabaseURL(t)
+
+	if err := avokadodb.RunMigrations(dbURL, "", nil); err != nil {
+		t.Fatalf("RunMigrations failed: %v", err)
+	}
+
+	// running again should be idempotent (no error, no change).
+	if err := avokadodb.RunMigrations(dbURL, "", nil); err != nil {
+		t.Fatalf("RunMigrations (idempotent) failed: %v", err)
+	}
+}
+
+func TestMigrationVersion_Integration(t *testing.T) {
+	dbURL := testDatabaseURL(t)
+
+	if err := avokadodb.RunMigrations(dbURL, "", nil); err != nil {
+		t.Fatalf("RunMigrations failed: %v", err)
+	}
+
+	version, dirty, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("MigrationVersion failed: %v", err)
+	}
+
+	if version == 0 {
+		t.Error("expected version > 0 after migrations")
+	}
+
+	if dirty {
+		t.Error("expected dirty to be false after clean migration")
+	}
+}
+
+func TestMigrationDownAndUp_Integration(t *testing.T) {
+	dbURL := testDatabaseURL(t)
+
+	// ensure migrations are applied first.
+	if err := avokadodb.RunMigrations(dbURL, "", nil); err != nil {
+		t.Fatalf("RunMigrations failed: %v", err)
+	}
+
+	versionBefore, _, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("MigrationVersion failed: %v", err)
+	}
+
+	// roll back one.
+	if err = avokadodb.MigrationDown(dbURL, "", nil); err != nil {
+		t.Fatalf("MigrationDown failed: %v", err)
+	}
+
+	// after full rollback, version should be 0 with no error.
+	versionAfterDown, _, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("MigrationVersion after down failed: %v", err)
+	}
+
+	if versionAfterDown != 0 {
+		t.Errorf("expected version 0 after full rollback, got %d", versionAfterDown)
+	}
+
+	// re-apply.
+	if err = avokadodb.RunMigrations(dbURL, "", nil); err != nil {
+		t.Fatalf("RunMigrations (re-apply) failed: %v", err)
+	}
+
+	versionRestored, _, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("MigrationVersion after re-apply failed: %v", err)
+	}
+
+	if versionRestored != versionBefore {
+		t.Errorf("expected version to restore to %d, got %d", versionBefore, versionRestored)
+	}
+}
+
+func TestMigrationForce_Integration(t *testing.T) {
+	dbURL := testDatabaseURL(t)
+
+	if err := avokadodb.RunMigrations(dbURL, "", nil); err != nil {
+		t.Fatalf("RunMigrations failed: %v", err)
+	}
+
+	version, _, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("MigrationVersion failed: %v", err)
+	}
+
+	// force to current version should not error.
+	if err = avokadodb.MigrationForce(dbURL, int(version), "", nil); err != nil {
+		t.Fatalf("MigrationForce failed: %v", err)
+	}
+
+	versionAfter, dirty, err := avokadodb.MigrationVersion(dbURL, "", nil)
+	if err != nil {
+		t.Fatalf("MigrationVersion after force failed: %v", err)
+	}
+
+	if versionAfter != version {
+		t.Errorf("expected version %d after force, got %d", version, versionAfter)
+	}
+
+	if dirty {
+		t.Error("expected dirty to be false after force")
+	}
+}
