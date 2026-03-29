@@ -3,12 +3,19 @@ package consolemailer_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/email/consolemailer"
 )
+
+type failWriter struct{}
+
+func (failWriter) Write(_ []byte) (int, error) {
+	return 0, errors.New("write failed")
+}
 
 func TestConsoleSend_PlainText(t *testing.T) {
 	t.Parallel()
@@ -105,5 +112,42 @@ func TestConsoleSend_WithAttachment(t *testing.T) {
 	}
 	if !strings.Contains(output, "report.csv") {
 		t.Error("expected output to contain attachment filename")
+	}
+}
+
+func TestConsoleSend_WriterError(t *testing.T) {
+	t.Parallel()
+
+	c := consolemailer.New(consolemailer.WithWriter(failWriter{}))
+
+	request := &avokadonotifier.EmailSenderRequest{
+		From:    "sender@example.com",
+		To:      []string{"a@example.com"},
+		Subject: "Fail",
+		Text:    "body",
+	}
+
+	if err := c.Send(context.Background(), request); err == nil {
+		t.Fatal("expected error from failing writer")
+	}
+}
+
+func TestConsoleSendAsync(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	c := consolemailer.New(consolemailer.WithWriter(&buf))
+
+	request := &avokadonotifier.EmailSenderRequest{
+		From:    "sender@example.com",
+		To:      []string{"a@example.com"},
+		Subject: "Async",
+		Text:    "async body",
+	}
+
+	c.SendAsync(context.Background(), request)
+
+	if !strings.Contains(buf.String(), "async body") {
+		t.Error("expected output to contain body text")
 	}
 }

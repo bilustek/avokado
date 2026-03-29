@@ -2,12 +2,14 @@ package webhookslacker_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier/slack/webhookslacker"
 )
@@ -86,6 +88,15 @@ func TestNotify_ClientError_NoRetry(t *testing.T) {
 
 	if got := callCount.Load(); got != 1 {
 		t.Errorf("expected 1 call for client error (no retry), got %d", got)
+	}
+
+	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err != nil {
+		var unwrapped interface{ Unwrap() error }
+		if errors.As(err, &unwrapped) {
+			if unwrapped.Unwrap() == nil {
+				t.Error("expected non-nil unwrapped error")
+			}
+		}
 	}
 }
 
@@ -201,5 +212,64 @@ func TestNew_DefaultHTTPClient(t *testing.T) {
 	}
 	if w == nil {
 		t.Fatal("expected non-nil Webhook instance")
+	}
+}
+
+func TestNotifyAsync(t *testing.T) {
+	t.Parallel()
+
+	var called atomic.Bool
+
+	client := mockClient(func(_ *http.Request) (*http.Response, error) {
+		called.Store(true)
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("ok")),
+		}, nil
+	})
+
+	w, err := webhookslacker.New(
+		webhookslacker.WithHTTPClient(client),
+		webhookslacker.WithLogger(slog.Default()),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
+	time.Sleep(100 * time.Millisecond)
+
+	if !called.Load() {
+		t.Error("expected HTTP request to be made")
+	}
+}
+
+func TestNotify_NetworkError_Retries(t *testing.T) {
+	t.Parallel()
+
+	var callCount atomic.Int32
+
+	client := mockClient(func(_ *http.Request) (*http.Response, error) {
+		callCount.Add(1)
+
+		return nil, io.ErrUnexpectedEOF
+	})
+
+	w, err := webhookslacker.New(
+		webhookslacker.WithHTTPClient(client),
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithMaxRetries(1),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err == nil {
+		t.Fatal("expected error after network failure")
+	}
+
+	if got := callCount.Load(); got != 2 {
+		t.Errorf("expected 2 calls (1 initial + 1 retry), got %d", got)
 	}
 }

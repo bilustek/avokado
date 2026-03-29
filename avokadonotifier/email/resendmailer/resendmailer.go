@@ -3,6 +3,7 @@ package resendmailer
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadonotifier"
@@ -45,6 +46,15 @@ func (r *Resend) SendAsync(ctx context.Context, request *avokadonotifier.EmailSe
 func WithAPIKey(apiKey string) Option {
 	return func(r *Resend) error {
 		r.client = resend.NewClient(apiKey)
+
+		return nil
+	}
+}
+
+// WithHTTPClient sets a custom HTTP client for the Resend API (useful for testing).
+func WithHTTPClient(apiKey string, httpClient *http.Client) Option {
+	return func(r *Resend) error {
+		r.client = resend.NewCustomClient(httpClient, apiKey)
 
 		return nil
 	}

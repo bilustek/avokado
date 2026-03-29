@@ -3,11 +3,18 @@ package consoleslacker_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/bilustek/avokado/avokadonotifier/slack/consoleslacker"
 )
+
+type failWriter struct{}
+
+func (failWriter) Write(_ []byte) (int, error) {
+	return 0, errors.New("write failed")
+}
 
 func TestConsoleNotify(t *testing.T) {
 	t.Parallel()
@@ -15,8 +22,7 @@ func TestConsoleNotify(t *testing.T) {
 	var buf bytes.Buffer
 	c := consoleslacker.New(consoleslacker.WithWriter(&buf))
 
-	err := c.Notify(context.Background(), "https://hooks.slack.com/services/xxx", "deploy completed")
-	if err != nil {
+	if err := c.Notify(context.Background(), "https://hooks.slack.com/services/xxx", "deploy completed"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -32,5 +38,28 @@ func TestConsoleNotify(t *testing.T) {
 	separator := strings.Repeat("-", 72)
 	if strings.Count(output, separator) != 2 {
 		t.Errorf("expected 2 separators, got %d", strings.Count(output, separator))
+	}
+}
+
+func TestConsoleNotify_WriterError(t *testing.T) {
+	t.Parallel()
+
+	c := consoleslacker.New(consoleslacker.WithWriter(failWriter{}))
+
+	if err := c.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err == nil {
+		t.Fatal("expected error from failing writer")
+	}
+}
+
+func TestConsoleNotifyAsync(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	c := consoleslacker.New(consoleslacker.WithWriter(&buf))
+
+	c.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
+
+	if !strings.Contains(buf.String(), "async msg") {
+		t.Error("expected output to contain message")
 	}
 }
