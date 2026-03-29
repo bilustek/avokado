@@ -23,6 +23,30 @@ func mockClient(fn roundTripFunc) *http.Client {
 	return &http.Client{Transport: fn}
 }
 
+const testWebhookURL = "https://hooks.slack.com/test"
+
+func newTestWebhook(
+	t *testing.T,
+	client *http.Client,
+	opts ...webhookslacker.Option,
+) *webhookslacker.Webhook {
+	t.Helper()
+
+	allOpts := []webhookslacker.Option{
+		webhookslacker.WithHTTPClient(client),
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithWebhookURL(testWebhookURL),
+	}
+	allOpts = append(allOpts, opts...)
+
+	w, err := webhookslacker.New(allOpts...)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	return w
+}
+
 func TestNotify_Success(t *testing.T) {
 	t.Parallel()
 
@@ -45,15 +69,9 @@ func TestNotify_Success(t *testing.T) {
 		}, nil
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client)
 
-	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "hello slack"); err != nil {
+	if err := w.Notify(context.Background(), "hello slack"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -72,16 +90,10 @@ func TestNotify_ClientError_NoRetry(t *testing.T) {
 		}, nil
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-		webhookslacker.WithMaxRetries(2),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client, webhookslacker.WithMaxRetries(2))
 
-	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err == nil {
+	notifyErr := w.Notify(context.Background(), "msg")
+	if notifyErr == nil {
 		t.Fatal("expected error for 400 response")
 	}
 
@@ -89,12 +101,10 @@ func TestNotify_ClientError_NoRetry(t *testing.T) {
 		t.Errorf("expected 1 call for client error (no retry), got %d", got)
 	}
 
-	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err != nil {
-		var unwrapped interface{ Unwrap() error }
-		if errors.As(err, &unwrapped) {
-			if unwrapped.Unwrap() == nil {
-				t.Error("expected non-nil unwrapped error")
-			}
+	var unwrapped interface{ Unwrap() error }
+	if errors.As(notifyErr, &unwrapped) {
+		if unwrapped.Unwrap() == nil {
+			t.Error("expected non-nil unwrapped error")
 		}
 	}
 }
@@ -113,16 +123,9 @@ func TestNotify_ServerError_Retries(t *testing.T) {
 		}, nil
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-		webhookslacker.WithMaxRetries(2),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client, webhookslacker.WithMaxRetries(2))
 
-	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err == nil {
+	if err := w.Notify(context.Background(), "msg"); err == nil {
 		t.Fatal("expected error after retries exhausted")
 	}
 
@@ -151,16 +154,9 @@ func TestNotify_RetriesThenSuccess(t *testing.T) {
 		}, nil
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-		webhookslacker.WithMaxRetries(3),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client, webhookslacker.WithMaxRetries(3))
 
-	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err != nil {
+	if err := w.Notify(context.Background(), "msg"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -181,15 +177,9 @@ func TestNotify_ContextCancelled(t *testing.T) {
 		return nil, nil
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client)
 
-	if err := w.Notify(ctx, "https://hooks.slack.com/test", "msg"); err == nil {
+	if err := w.Notify(ctx, "msg"); err == nil {
 		t.Fatal("expected error for cancelled context")
 	}
 }
@@ -197,15 +187,30 @@ func TestNotify_ContextCancelled(t *testing.T) {
 func TestNew_WithoutLogger_ReturnsError(t *testing.T) {
 	t.Parallel()
 
-	if _, err := webhookslacker.New(); err == nil {
+	if _, err := webhookslacker.New(
+		webhookslacker.WithWebhookURL(testWebhookURL),
+	); err == nil {
 		t.Fatal("expected error when no logger provided")
+	}
+}
+
+func TestNew_WithoutWebhookURL_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := webhookslacker.New(
+		webhookslacker.WithLogger(slog.Default()),
+	); err == nil {
+		t.Fatal("expected error when no webhook URL provided")
 	}
 }
 
 func TestNew_DefaultHTTPClient(t *testing.T) {
 	t.Parallel()
 
-	w, err := webhookslacker.New(webhookslacker.WithLogger(slog.Default()))
+	w, err := webhookslacker.New(
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithWebhookURL(testWebhookURL),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -228,15 +233,30 @@ func TestNotifyAsync(t *testing.T) {
 		}, nil
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client)
 
-	w.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
+	w.NotifyAsync(context.Background(), "async msg")
+	<-done
+}
+
+func TestNotifyAsync_Error(t *testing.T) {
+	t.Parallel()
+
+	done := make(chan struct{})
+
+	client := mockClient(func(_ *http.Request) (*http.Response, error) {
+		defer close(done)
+
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader("error")),
+		}, nil
+	})
+
+	w := newTestWebhook(t, client, webhookslacker.WithMaxRetries(0))
+
+	// should not panic on error path
+	w.NotifyAsync(context.Background(), "msg")
 	<-done
 }
 
@@ -251,16 +271,9 @@ func TestNotify_NetworkError_Retries(t *testing.T) {
 		return nil, io.ErrUnexpectedEOF
 	})
 
-	w, err := webhookslacker.New(
-		webhookslacker.WithHTTPClient(client),
-		webhookslacker.WithLogger(slog.Default()),
-		webhookslacker.WithMaxRetries(1),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	w := newTestWebhook(t, client, webhookslacker.WithMaxRetries(1))
 
-	if err := w.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err == nil {
+	if err := w.Notify(context.Background(), "msg"); err == nil {
 		t.Fatal("expected error after network failure")
 	}
 
@@ -274,6 +287,7 @@ func TestWithMaxRetries_Negative_ReturnsError(t *testing.T) {
 
 	if _, err := webhookslacker.New(
 		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithWebhookURL(testWebhookURL),
 		webhookslacker.WithMaxRetries(-1),
 	); err == nil {
 		t.Fatal("expected error for negative maxRetries")
@@ -285,6 +299,7 @@ func TestWithMaxRetries_ExceedsMax_ReturnsError(t *testing.T) {
 
 	if _, err := webhookslacker.New(
 		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithWebhookURL(testWebhookURL),
 		webhookslacker.WithMaxRetries(11),
 	); err == nil {
 		t.Fatal("expected error for maxRetries > 10")
@@ -296,8 +311,20 @@ func TestWithHTTPClient_Nil_ReturnsError(t *testing.T) {
 
 	if _, err := webhookslacker.New(
 		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithWebhookURL(testWebhookURL),
 		webhookslacker.WithHTTPClient(nil),
 	); err == nil {
 		t.Fatal("expected error for nil HTTP client")
+	}
+}
+
+func TestWithWebhookURL_Empty_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := webhookslacker.New(
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithWebhookURL(""),
+	); err == nil {
+		t.Fatal("expected error for empty webhook URL")
 	}
 }

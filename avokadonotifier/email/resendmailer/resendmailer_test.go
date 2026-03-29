@@ -183,3 +183,38 @@ func TestSendAsync(t *testing.T) {
 	r.SendAsync(context.Background(), request)
 	<-done
 }
+
+func TestSendAsync_Error(t *testing.T) {
+	t.Parallel()
+
+	done := make(chan struct{})
+
+	client := mockClient(func(_ *http.Request) (*http.Response, error) {
+		defer close(done)
+
+		return &http.Response{
+			StatusCode: http.StatusUnprocessableEntity,
+			Body:       io.NopCloser(strings.NewReader(`{"message":"error"}`)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	r, err := resendmailer.New(
+		resendmailer.WithHTTPClient("re_test_123", client),
+		resendmailer.WithLogger(slog.Default()),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	request := &avokadonotifier.EmailSenderRequest{
+		From:    "sender@example.com",
+		To:      []string{"a@example.com"},
+		Subject: "Async Error Test",
+		Text:    "async",
+	}
+
+	// should not panic on error path
+	r.SendAsync(context.Background(), request)
+	<-done
+}

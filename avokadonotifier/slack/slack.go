@@ -15,6 +15,7 @@ type Option func(*config) error
 type config struct {
 	serverEnvironmentName string
 	logger                *slog.Logger
+	webhookURL            string
 }
 
 // WithServerEnvironmentName sets the notifier's server environment.
@@ -30,6 +31,15 @@ func WithServerEnvironmentName(serverEnvironmentName string) Option {
 func WithLogger(logger *slog.Logger) Option {
 	return func(c *config) error {
 		c.logger = logger
+
+		return nil
+	}
+}
+
+// WithWebhookURL sets the Slack webhook URL for production delivery.
+func WithWebhookURL(url string) Option {
+	return func(c *config) error {
+		c.webhookURL = url
 
 		return nil
 	}
@@ -60,7 +70,15 @@ func New(opts ...Option) (avokadonotifier.SlackNotifier, error) {
 				"[avokadonotifier/slack.New] logger required for non-development environments, use WithLogger",
 			)
 		}
+		if cfg.webhookURL == "" {
+			return nil, avokadoerror.New(
+				"[avokadonotifier/slack.New] webhookURL required for non-development environments, use WithWebhookURL",
+			)
+		}
 
-		return webhookslacker.New(webhookslacker.WithLogger(cfg.logger))
+		return webhookslacker.New(
+			webhookslacker.WithLogger(cfg.logger),
+			webhookslacker.WithWebhookURL(cfg.webhookURL),
+		)
 	}
 }

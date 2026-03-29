@@ -37,11 +37,12 @@ type Option func(*Webhook) error
 type Webhook struct {
 	client     *http.Client
 	logger     *slog.Logger
+	webhookURL string
 	maxRetries int
 }
 
-// Notify sends a message to the given Slack webhook URL with retry and backoff.
-func (w *Webhook) Notify(ctx context.Context, webhookURL, message string) error {
+// Notify sends a message to the configured Slack webhook URL with retry and backoff.
+func (w *Webhook) Notify(ctx context.Context, message string) error {
 	payload := `{"text":` + strconv.Quote(message) + `}`
 
 	var lastErr error
@@ -53,15 +54,18 @@ func (w *Webhook) Notify(ctx context.Context, webhookURL, message string) error 
 
 		if attempt > 0 {
 			backoff := time.Duration(1<<(attempt-1)) * time.Second
+			timer := time.NewTimer(backoff)
 
 			select {
 			case <-ctx.Done():
+				timer.Stop()
+
 				return avokadoerror.New("[Webhook.Notify] context cancelled during backoff").WithErr(ctx.Err())
-			case <-time.After(backoff):
+			case <-timer.C:
 			}
 		}
 
-		if lastErr = w.doRequest(ctx, webhookURL, payload); lastErr == nil {
+		if lastErr = w.doRequest(ctx, payload); lastErr == nil {
 			w.logger.InfoContext(ctx, "[Webhook.Notify] message sent")
 
 			return nil
@@ -85,14 +89,16 @@ func (w *Webhook) Notify(ctx context.Context, webhookURL, message string) error 
 }
 
 // NotifyAsync sends a message in a background goroutine, logging is handled by Notify.
-func (w *Webhook) NotifyAsync(ctx context.Context, webhookURL, message string) {
+func (w *Webhook) NotifyAsync(ctx context.Context, message string) {
 	go func() {
-		_ = w.Notify(ctx, webhookURL, message)
+		_ = w.Notify(ctx, message)
 	}()
 }
 
-func (w *Webhook) doRequest(ctx context.Context, webhookURL, payload string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewBufferString(payload))
+func (w *Webhook) doRequest(ctx context.Context, payload string) error {
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodPost, w.webhookURL, bytes.NewBufferString(payload),
+	)
 	if err != nil {
 		return avokadoerror.New("[Webhook.doRequest] create request err").WithErr(err)
 	}
@@ -113,7 +119,10 @@ func (w *Webhook) doRequest(ctx context.Context, webhookURL, payload string) err
 	}
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return avokadoerror.New("[Webhook.doRequest] read response body err").WithErr(readErr)
+		}
 
 		return clientError{
 			err: avokadoerror.New(
@@ -123,6 +132,19 @@ func (w *Webhook) doRequest(ctx context.Context, webhookURL, payload string) err
 	}
 
 	return nil
+}
+
+// WithWebhookURL sets the Slack webhook URL.
+func WithWebhookURL(url string) Option {
+	return func(w *Webhook) error {
+		if url == "" {
+			return avokadoerror.New("[webhookslacker.WithWebhookURL] webhookURL must not be empty")
+		}
+
+		w.webhookURL = url
+
+		return nil
+	}
 }
 
 // WithHTTPClient sets a custom HTTP client (useful for testing with mock RoundTripper).
@@ -147,7 +169,7 @@ func WithLogger(logger *slog.Logger) Option {
 	}
 }
 
-// WithMaxRetries sets the maximum number of retries on failure. Must be >= 0.
+// WithMaxRetries sets the maximum number of retries on failure. Must be between 0 and maxAllowedRetries.
 func WithMaxRetries(n int) Option {
 	return func(w *Webhook) error {
 		if n < 0 || n > maxAllowedRetries {
@@ -177,6 +199,9 @@ func New(opts ...Option) (*Webhook, error) {
 
 	if cfg.logger == nil {
 		return nil, avokadoerror.New("[webhookslacker.New] logger is required, use WithLogger")
+	}
+	if cfg.webhookURL == "" {
+		return nil, avokadoerror.New("[webhookslacker.New] webhookURL is required, use WithWebhookURL")
 	}
 
 	return cfg, nil

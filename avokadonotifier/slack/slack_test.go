@@ -31,12 +31,13 @@ func TestNew_DevelopmentExplicit(t *testing.T) {
 	}
 }
 
-func TestNew_ProductionWithLogger(t *testing.T) {
+func TestNew_ProductionWithAllOptions(t *testing.T) {
 	t.Parallel()
 
 	n, err := slack.New(
 		slack.WithServerEnvironmentName("production"),
 		slack.WithLogger(slog.Default()),
+		slack.WithWebhookURL("https://hooks.slack.com/test"),
 	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -49,8 +50,22 @@ func TestNew_ProductionWithLogger(t *testing.T) {
 func TestNew_ProductionWithoutLogger(t *testing.T) {
 	t.Parallel()
 
-	if _, err := slack.New(slack.WithServerEnvironmentName("production")); err == nil {
+	if _, err := slack.New(
+		slack.WithServerEnvironmentName("production"),
+		slack.WithWebhookURL("https://hooks.slack.com/test"),
+	); err == nil {
 		t.Fatal("expected error when no logger provided for production")
+	}
+}
+
+func TestNew_ProductionWithoutWebhookURL(t *testing.T) {
+	t.Parallel()
+
+	if _, err := slack.New(
+		slack.WithServerEnvironmentName("production"),
+		slack.WithLogger(slog.Default()),
+	); err == nil {
+		t.Fatal("expected error when no webhook URL provided for production")
 	}
 }
 

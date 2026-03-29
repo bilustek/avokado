@@ -60,15 +60,12 @@ func TestConsoleNotify(t *testing.T) {
 	var buf bytes.Buffer
 	c := consoleslacker.New(consoleslacker.WithWriter(&buf))
 
-	if err := c.Notify(context.Background(), "https://hooks.slack.com/services/xxx", "deploy completed"); err != nil {
+	if err := c.Notify(context.Background(), "deploy completed"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	output := buf.String()
 
-	if !strings.Contains(output, "Webhook: [REDACTED]") {
-		t.Error("expected output to contain redacted webhook")
-	}
 	if !strings.Contains(output, "Message: deploy completed") {
 		t.Error("expected output to contain message")
 	}
@@ -84,7 +81,7 @@ func TestConsoleNotify_WriterError(t *testing.T) {
 
 	c := consoleslacker.New(consoleslacker.WithWriter(failWriter{}))
 
-	if err := c.Notify(context.Background(), "https://hooks.slack.com/test", "msg"); err == nil {
+	if err := c.Notify(context.Background(), "msg"); err == nil {
 		t.Fatal("expected error from failing writer")
 	}
 }
@@ -95,10 +92,19 @@ func TestConsoleNotifyAsync(t *testing.T) {
 	nw := newNotifyWriter("async msg")
 	c := consoleslacker.New(consoleslacker.WithWriter(nw))
 
-	c.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
+	c.NotifyAsync(context.Background(), "async msg")
 	<-nw.done
 
 	if !strings.Contains(nw.String(), "async msg") {
 		t.Error("expected output to contain message")
 	}
+}
+
+func TestConsoleNotifyAsync_WriterError(t *testing.T) {
+	t.Parallel()
+
+	c := consoleslacker.New(consoleslacker.WithWriter(failWriter{}))
+
+	// should not panic
+	c.NotifyAsync(context.Background(), "msg")
 }

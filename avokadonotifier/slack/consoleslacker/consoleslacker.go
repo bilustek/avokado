@@ -21,13 +21,10 @@ type Console struct {
 }
 
 // Notify writes the slack message to the configured writer.
-func (c *Console) Notify(_ context.Context, _, message string) error {
+func (c *Console) Notify(_ context.Context, message string) error {
 	separator := strings.Repeat("-", 72)
 
 	if _, err := io.WriteString(c.writer, separator+"\n"); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(c.writer, "Webhook: [REDACTED]\n"); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(c.writer, "Message: "+message+"\n"); err != nil {
@@ -41,9 +38,9 @@ func (c *Console) Notify(_ context.Context, _, message string) error {
 }
 
 // NotifyAsync writes the slack message to the configured writer in a background goroutine.
-func (c *Console) NotifyAsync(ctx context.Context, _, message string) {
+func (c *Console) NotifyAsync(ctx context.Context, message string) {
 	go func() {
-		_ = c.Notify(ctx, "", message)
+		_ = c.Notify(ctx, message)
 	}()
 }
 

@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"fmt"
 	"mime/multipart"
 	"net/mail"
 	"net/textproto"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,8 +50,8 @@ type EmailSender interface {
 
 // SlackNotifier sends Slack notifications.
 type SlackNotifier interface {
-	Notify(ctx context.Context, webhookURL, message string) error
-	NotifyAsync(ctx context.Context, webhookURL, message string)
+	Notify(ctx context.Context, message string) error
+	NotifyAsync(ctx context.Context, message string)
 }
 
 // EmailSenderRequestToResendRequest converts an EmailSenderRequest into a resend.SendEmailRequest.
@@ -147,7 +147,7 @@ func EmailSenderRequestToMailMessage(request *EmailSenderRequest) (*mail.Message
 			ah := make(textproto.MIMEHeader)
 			ah.Set("Content-Type", a.ContentType)
 			ah.Set("Content-Transfer-Encoding", "base64")
-			ah.Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, a.Filename))
+			ah.Set("Content-Disposition", "attachment; filename="+strconv.Quote(a.Filename))
 
 			p, cpErr := mw.CreatePart(ah)
 			if cpErr != nil {
