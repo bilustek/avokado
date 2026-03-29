@@ -70,9 +70,12 @@ func (s *Console) SendAsync(ctx context.Context, request *avokadonotifier.EmailS
 }
 
 // WithWriter overrides the default output destination (os.Stderr).
+// If w is nil, the default (os.Stderr) is kept.
 func WithWriter(w io.Writer) Option {
 	return func(c *Console) {
-		c.writer = w
+		if w != nil {
+			c.writer = w
+		}
 	}
 }
 
