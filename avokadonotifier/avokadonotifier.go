@@ -55,7 +55,10 @@ type SlackNotifier interface {
 }
 
 // EmailSenderRequestToResendRequest converts an EmailSenderRequest into a resend.SendEmailRequest.
-func EmailSenderRequestToResendRequest(request *EmailSenderRequest) *resend.SendEmailRequest {
+func EmailSenderRequestToResendRequest(request *EmailSenderRequest) (*resend.SendEmailRequest, error) {
+	if request == nil {
+		return nil, avokadoerror.New("[EmailSenderRequestToResendRequest] request must not be nil")
+	}
 	r := &resend.SendEmailRequest{
 		From:    request.From,
 		To:      request.To,
@@ -80,6 +83,10 @@ func EmailSenderRequestToResendRequest(request *EmailSenderRequest) *resend.Send
 	}
 
 	for _, a := range request.Attachments {
+		if a == nil {
+			return nil, avokadoerror.New("[EmailSenderRequestToResendRequest] attachment must not be nil")
+		}
+
 		r.Attachments = append(r.Attachments, &resend.Attachment{
 			Content:     a.Content,
 			Filename:    a.Filename,
@@ -88,20 +95,22 @@ func EmailSenderRequestToResendRequest(request *EmailSenderRequest) *resend.Send
 		})
 	}
 
-	return r
+	return r, nil
 }
 
 // EmailSenderRequestToMailMessage converts an EmailSenderRequest into a standard net/mail.Message.
 func EmailSenderRequestToMailMessage(request *EmailSenderRequest) (*mail.Message, error) {
+	if request == nil {
+		return nil, avokadoerror.New("[EmailSenderRequestToMailMessage] request must not be nil")
+	}
+
 	header := make(mail.Header)
 	header["From"] = []string{request.From}
 	header["To"] = []string{strings.Join(request.To, ", ")}
 	header["Subject"] = []string{request.Subject}
 	header["Date"] = []string{time.Now().Format(time.RFC1123Z)}
 
-	if len(request.Bcc) > 0 {
-		header["Bcc"] = []string{strings.Join(request.Bcc, ", ")}
-	}
+	// BCC is intentionally omitted from headers to preserve recipient privacy.
 	if len(request.Cc) > 0 {
 		header["Cc"] = []string{strings.Join(request.Cc, ", ")}
 	}
@@ -144,6 +153,10 @@ func EmailSenderRequestToMailMessage(request *EmailSenderRequest) (*mail.Message
 		}
 
 		for _, a := range request.Attachments {
+			if a == nil {
+				return nil, avokadoerror.New("[EmailSenderRequestToMailMessage] attachment must not be nil")
+			}
+
 			ah := make(textproto.MIMEHeader)
 			ah.Set("Content-Type", a.ContentType)
 			ah.Set("Content-Transfer-Encoding", "base64")

@@ -91,7 +91,7 @@ func (w *Webhook) Notify(ctx context.Context, message string) error {
 // NotifyAsync sends a message in a background goroutine, logging is handled by Notify.
 func (w *Webhook) NotifyAsync(ctx context.Context, message string) {
 	go func() {
-		_ = w.Notify(ctx, message)
+		_ = w.Notify(context.WithoutCancel(ctx), message)
 	}()
 }
 

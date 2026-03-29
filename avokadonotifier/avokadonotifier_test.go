@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bilustek/avokado/avokadonotifier"
-	"github.com/resend/resend-go/v3"
 )
 
 func TestEmailSenderRequestToMailMessage_PlainText(t *testing.T) {
@@ -119,8 +118,8 @@ func TestEmailSenderRequestToMailMessage_OptionalHeaders(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if got := msg.Header.Get("Bcc"); got != "bcc1@example.com, bcc2@example.com" {
-		t.Errorf("expected Bcc %q, got %q", "bcc1@example.com, bcc2@example.com", got)
+	if got := msg.Header.Get("Bcc"); got != "" {
+		t.Errorf("expected Bcc header to be omitted for privacy, got %q", got)
 	}
 	if got := msg.Header.Get("Cc"); got != "cc@example.com" {
 		t.Errorf("expected Cc %q, got %q", "cc@example.com", got)
@@ -279,7 +278,10 @@ func TestEmailSenderRequestToResendRequest_AllFields(t *testing.T) {
 		},
 	}
 
-	got := avokadonotifier.EmailSenderRequestToResendRequest(request)
+	got, err := avokadonotifier.EmailSenderRequestToResendRequest(request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if got.From != "sender@example.com" {
 		t.Errorf("expected From %q, got %q", "sender@example.com", got.From)
@@ -337,7 +339,10 @@ func TestEmailSenderRequestToResendRequest_OnlyRequiredFields(t *testing.T) {
 		Text:    "body",
 	}
 
-	got := avokadonotifier.EmailSenderRequestToResendRequest(request)
+	got, err := avokadonotifier.EmailSenderRequestToResendRequest(request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if got.Bcc != nil {
 		t.Errorf("expected nil Bcc, got %v", got.Bcc)
@@ -359,18 +364,39 @@ func TestEmailSenderRequestToResendRequest_OnlyRequiredFields(t *testing.T) {
 	}
 }
 
-func TestEmailSenderRequestToResendRequest_ReturnsCorrectType(t *testing.T) {
+func TestEmailSenderRequestToResendRequest_NilRequest(t *testing.T) {
+	t.Parallel()
+
+	if _, err := avokadonotifier.EmailSenderRequestToResendRequest(nil); err == nil {
+		t.Fatal("expected error for nil request")
+	}
+}
+
+func TestEmailSenderRequestToMailMessage_NilRequest(t *testing.T) {
+	t.Parallel()
+
+	if _, err := avokadonotifier.EmailSenderRequestToMailMessage(nil); err == nil {
+		t.Fatal("expected error for nil request")
+	}
+}
+
+func TestEmailSenderRequestToMailMessage_BccNotInHeaders(t *testing.T) {
 	t.Parallel()
 
 	request := &avokadonotifier.EmailSenderRequest{
 		From:    "sender@example.com",
 		To:      []string{"a@example.com"},
-		Subject: "Type Check",
+		Subject: "Bcc Test",
 		Text:    "body",
+		Bcc:     []string{"secret@example.com"},
 	}
 
-	var got *resend.SendEmailRequest = avokadonotifier.EmailSenderRequestToResendRequest(request)
-	if got == nil {
-		t.Fatal("expected non-nil result")
+	msg, err := avokadonotifier.EmailSenderRequestToMailMessage(request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := msg.Header.Get("Bcc"); got != "" {
+		t.Errorf("expected Bcc header to be omitted, got %q", got)
 	}
 }

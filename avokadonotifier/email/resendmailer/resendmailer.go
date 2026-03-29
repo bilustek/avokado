@@ -24,7 +24,10 @@ type Resend struct {
 
 // Send delivers an email through the Resend API.
 func (r *Resend) Send(ctx context.Context, request *avokadonotifier.EmailSenderRequest) error {
-	req := avokadonotifier.EmailSenderRequestToResendRequest(request)
+	req, reqErr := avokadonotifier.EmailSenderRequestToResendRequest(request)
+	if reqErr != nil {
+		return reqErr
+	}
 
 	if _, err := r.client.Emails.SendWithContext(ctx, req); err != nil {
 		r.logger.ErrorContext(ctx, "[Resend.Send] err", "error", err)
@@ -40,7 +43,7 @@ func (r *Resend) Send(ctx context.Context, request *avokadonotifier.EmailSenderR
 // SendAsync delivers an email in a background goroutine, logging is handled by Send.
 func (r *Resend) SendAsync(ctx context.Context, request *avokadonotifier.EmailSenderRequest) {
 	go func() {
-		_ = r.Send(ctx, request)
+		_ = r.Send(context.WithoutCancel(ctx), request)
 	}()
 }
 

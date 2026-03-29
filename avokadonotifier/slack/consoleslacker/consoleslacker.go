@@ -40,7 +40,7 @@ func (c *Console) Notify(_ context.Context, message string) error {
 // NotifyAsync writes the slack message to the configured writer in a background goroutine.
 func (c *Console) NotifyAsync(ctx context.Context, message string) {
 	go func() {
-		_ = c.Notify(ctx, message)
+		_ = c.Notify(context.WithoutCancel(ctx), message)
 	}()
 }
 

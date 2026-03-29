@@ -65,7 +65,7 @@ func (s *Console) Send(_ context.Context, request *avokadonotifier.EmailSenderRe
 // SendAsync writes the email content to the configured writer in a background goroutine.
 func (s *Console) SendAsync(ctx context.Context, request *avokadonotifier.EmailSenderRequest) {
 	go func() {
-		_ = s.Send(ctx, request)
+		_ = s.Send(context.WithoutCancel(ctx), request)
 	}()
 }
 
