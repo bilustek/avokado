@@ -273,3 +273,36 @@ func TestNotify_NetworkError_Retries(t *testing.T) {
 		t.Errorf("expected 2 calls (1 initial + 1 retry), got %d", got)
 	}
 }
+
+func TestWithMaxRetries_Negative_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := webhookslacker.New(
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithMaxRetries(-1),
+	); err == nil {
+		t.Fatal("expected error for negative maxRetries")
+	}
+}
+
+func TestWithMaxRetries_ExceedsMax_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := webhookslacker.New(
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithMaxRetries(11),
+	); err == nil {
+		t.Fatal("expected error for maxRetries > 10")
+	}
+}
+
+func TestWithHTTPClient_Nil_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	if _, err := webhookslacker.New(
+		webhookslacker.WithLogger(slog.Default()),
+		webhookslacker.WithHTTPClient(nil),
+	); err == nil {
+		t.Fatal("expected error for nil HTTP client")
+	}
+}

@@ -15,7 +15,7 @@ func TestNew_DefaultIsDevelopment(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil SlackNotifier")
 	}
 }
 
@@ -27,7 +27,7 @@ func TestNew_DevelopmentExplicit(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil SlackNotifier")
 	}
 }
 
@@ -42,7 +42,7 @@ func TestNew_ProductionWithLogger(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil SlackNotifier")
 	}
 }
 

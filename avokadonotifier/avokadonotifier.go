@@ -124,7 +124,10 @@ func EmailSenderRequestToMailMessage(request *EmailSenderRequest) (*mail.Message
 
 	if len(request.Attachments) == 0 {
 		header["Content-Type"] = []string{contentType}
-		buf.WriteString(content)
+
+		if _, err := buf.WriteString(content); err != nil {
+			return nil, avokadoerror.New("[EmailSenderRequestToMailMessage] write content err").WithErr(err)
+		}
 	} else {
 		mw := multipart.NewWriter(&buf)
 		header["Content-Type"] = []string{"multipart/mixed; boundary=" + mw.Boundary()}
@@ -155,9 +158,14 @@ func EmailSenderRequestToMailMessage(request *EmailSenderRequest) (*mail.Message
 			if _, err := enc.Write(a.Content); err != nil {
 				return nil, avokadoerror.New("[EmailSenderRequestToMailMessage] enc write err").WithErr(err)
 			}
-			_ = enc.Close()
+			if err := enc.Close(); err != nil {
+				return nil, avokadoerror.New("[EmailSenderRequestToMailMessage] enc close err").WithErr(err)
+			}
 		}
-		_ = mw.Close()
+
+		if err := mw.Close(); err != nil {
+			return nil, avokadoerror.New("[EmailSenderRequestToMailMessage] multipart close err").WithErr(err)
+		}
 	}
 
 	return &mail.Message{

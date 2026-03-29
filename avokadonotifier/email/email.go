@@ -9,21 +9,19 @@ import (
 	"github.com/bilustek/avokado/avokadonotifier/email/resendmailer"
 )
 
-// Option is a functional option for configuring the notifier.
-type Option func(*Notifier) error
+// Option is a functional option for configuring the email notifier.
+type Option func(*config) error
 
-// Notifier is the email notification hub that delegates to the active EmailSender implementation.
-type Notifier struct {
+type config struct {
 	serverEnvironmentName string
 	resendAPIKey          string
 	logger                *slog.Logger
-	emailer               avokadonotifier.EmailSender
 }
 
 // WithServerEnvironmentName sets the notifier's server environment.
 func WithServerEnvironmentName(serverEnvironmentName string) Option {
-	return func(n *Notifier) error {
-		n.serverEnvironmentName = serverEnvironmentName
+	return func(c *config) error {
+		c.serverEnvironmentName = serverEnvironmentName
 
 		return nil
 	}
@@ -31,8 +29,8 @@ func WithServerEnvironmentName(serverEnvironmentName string) Option {
 
 // WithResendAPIKey sets the Resend API key for production email delivery.
 func WithResendAPIKey(apiKey string) Option {
-	return func(n *Notifier) error {
-		n.resendAPIKey = apiKey
+	return func(c *config) error {
+		c.resendAPIKey = apiKey
 
 		return nil
 	}
@@ -40,52 +38,47 @@ func WithResendAPIKey(apiKey string) Option {
 
 // WithLogger sets the logger.
 func WithLogger(logger *slog.Logger) Option {
-	return func(n *Notifier) error {
-		n.logger = logger
+	return func(c *config) error {
+		c.logger = logger
 
 		return nil
 	}
 }
 
-// New creates a Notifier configured via functional options.
-func New(opts ...Option) (*Notifier, error) {
-	notifier := &Notifier{
+// New creates an EmailSender configured via functional options.
+func New(opts ...Option) (avokadonotifier.EmailSender, error) {
+	cfg := &config{
 		serverEnvironmentName: "development",
 	}
 
 	for _, opt := range opts {
-		if err := opt(notifier); err != nil {
+		if err := opt(cfg); err != nil {
 			return nil, err
 		}
 	}
 
-	if notifier.serverEnvironmentName == "" {
-		return nil, avokadoerror.New("[avokadonotifier.New] serverEnvironmentName required")
+	if cfg.serverEnvironmentName == "" {
+		return nil, avokadoerror.New("[avokadonotifier/email.New] serverEnvironmentName required")
 	}
 
-	switch notifier.serverEnvironmentName {
+	switch cfg.serverEnvironmentName {
 	case "development":
-		notifier.emailer = consolemailer.New()
+		return consolemailer.New(), nil
 	default:
-		if notifier.resendAPIKey == "" {
-			return nil, avokadoerror.New("[avokadonotifier.New] resendAPIKey required for non-development environments")
-		}
-		if notifier.logger == nil {
+		if cfg.resendAPIKey == "" {
 			return nil, avokadoerror.New(
-				"[avokadonotifier.New] logger required for non-development environments, use WithLogger",
+				"[avokadonotifier/email.New] resendAPIKey required for non-development environments",
+			)
+		}
+		if cfg.logger == nil {
+			return nil, avokadoerror.New(
+				"[avokadonotifier/email.New] logger required for non-development environments, use WithLogger",
 			)
 		}
 
-		mailer, mailerErr := resendmailer.New(
-			resendmailer.WithAPIKey(notifier.resendAPIKey),
-			resendmailer.WithLogger(notifier.logger),
+		return resendmailer.New(
+			resendmailer.WithAPIKey(cfg.resendAPIKey),
+			resendmailer.WithLogger(cfg.logger),
 		)
-		if mailerErr != nil {
-			return nil, mailerErr
-		}
-
-		notifier.emailer = mailer
 	}
-
-	return notifier, nil
 }

@@ -24,7 +24,9 @@ type Resend struct {
 
 // Send delivers an email through the Resend API.
 func (r *Resend) Send(ctx context.Context, request *avokadonotifier.EmailSenderRequest) error {
-	if _, err := r.client.Emails.Send(avokadonotifier.EmailSenderRequestToResendRequest(request)); err != nil {
+	req := avokadonotifier.EmailSenderRequestToResendRequest(request)
+
+	if _, err := r.client.Emails.SendWithContext(ctx, req); err != nil {
 		r.logger.ErrorContext(ctx, "[Resend.Send] err", "error", err)
 
 		return avokadoerror.New("[Resend.Send] err").WithErr(err)

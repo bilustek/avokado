@@ -27,7 +27,7 @@ func (c *Console) Notify(_ context.Context, webhookURL, message string) error {
 	if _, err := io.WriteString(c.writer, separator+"\n"); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(c.writer, "Webhook: "+webhookURL+"\n"); err != nil {
+	if _, err := io.WriteString(c.writer, "Webhook: [REDACTED]\n"); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(c.writer, "Message: "+message+"\n"); err != nil {
@@ -40,9 +40,11 @@ func (c *Console) Notify(_ context.Context, webhookURL, message string) error {
 	return nil
 }
 
-// NotifyAsync writes the slack message to the configured writer without blocking.
+// NotifyAsync writes the slack message to the configured writer in a background goroutine.
 func (c *Console) NotifyAsync(ctx context.Context, webhookURL, message string) {
-	_ = c.Notify(ctx, webhookURL, message)
+	go func() {
+		_ = c.Notify(ctx, webhookURL, message)
+	}()
 }
 
 // WithWriter overrides the default output destination (os.Stderr).

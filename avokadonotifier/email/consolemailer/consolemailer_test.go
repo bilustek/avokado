@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/email/consolemailer"
@@ -135,8 +137,8 @@ func TestConsoleSend_WriterError(t *testing.T) {
 func TestConsoleSendAsync(t *testing.T) {
 	t.Parallel()
 
-	var buf bytes.Buffer
-	c := consolemailer.New(consolemailer.WithWriter(&buf))
+	r, w := io.Pipe()
+	c := consolemailer.New(consolemailer.WithWriter(w))
 
 	request := &avokadonotifier.EmailSenderRequest{
 		From:    "sender@example.com",
@@ -145,9 +147,22 @@ func TestConsoleSendAsync(t *testing.T) {
 		Text:    "async body",
 	}
 
-	c.SendAsync(context.Background(), request)
+	done := make(chan string)
 
-	if !strings.Contains(buf.String(), "async body") {
+	go func() {
+		var buf bytes.Buffer
+
+		_, _ = io.Copy(&buf, r)
+
+		done <- buf.String()
+	}()
+
+	c.SendAsync(context.Background(), request)
+	time.Sleep(50 * time.Millisecond)
+	w.Close()
+
+	output := <-done
+	if !strings.Contains(output, "async body") {
 		t.Error("expected output to contain body text")
 	}
 }

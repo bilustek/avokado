@@ -14,7 +14,10 @@ import (
 	"github.com/bilustek/avokado/avokadonotifier"
 )
 
-const defaultmaxRetries = 5
+const (
+	defaultMaxRetries = 5
+	maxAllowedRetries = 10
+)
 
 // clientError represents a non-retryable HTTP client error (4xx).
 type clientError struct {
@@ -59,7 +62,7 @@ func (w *Webhook) Notify(ctx context.Context, webhookURL, message string) error 
 		}
 
 		if lastErr = w.doRequest(ctx, webhookURL, payload); lastErr == nil {
-			w.logger.InfoContext(ctx, "[Webhook.Notify] message sent", "webhookURL", webhookURL)
+			w.logger.InfoContext(ctx, "[Webhook.Notify] message sent")
 
 			return nil
 		}
@@ -101,6 +104,7 @@ func (w *Webhook) doRequest(ctx context.Context, webhookURL, payload string) err
 		return avokadoerror.New("[Webhook.doRequest] err").WithErr(err)
 	}
 	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
 	}()
 
@@ -124,6 +128,10 @@ func (w *Webhook) doRequest(ctx context.Context, webhookURL, payload string) err
 // WithHTTPClient sets a custom HTTP client (useful for testing with mock RoundTripper).
 func WithHTTPClient(client *http.Client) Option {
 	return func(w *Webhook) error {
+		if client == nil {
+			return avokadoerror.New("[webhookslacker.WithHTTPClient] client must not be nil")
+		}
+
 		w.client = client
 
 		return nil
@@ -139,9 +147,15 @@ func WithLogger(logger *slog.Logger) Option {
 	}
 }
 
-// WithMaxRetries sets the maximum number of retries on failure.
+// WithMaxRetries sets the maximum number of retries on failure. Must be >= 0.
 func WithMaxRetries(n int) Option {
 	return func(w *Webhook) error {
+		if n < 0 || n > maxAllowedRetries {
+			return avokadoerror.New(
+				"[webhookslacker.WithMaxRetries] maxRetries must be between 0 and " + strconv.Itoa(maxAllowedRetries),
+			)
+		}
+
 		w.maxRetries = n
 
 		return nil
@@ -152,7 +166,7 @@ func WithMaxRetries(n int) Option {
 func New(opts ...Option) (*Webhook, error) {
 	cfg := &Webhook{
 		client:     &http.Client{Timeout: 10 * time.Second},
-		maxRetries: defaultmaxRetries,
+		maxRetries: defaultMaxRetries,
 	}
 
 	for _, opt := range opts {

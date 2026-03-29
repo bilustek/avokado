@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bilustek/avokado/avokadonotifier/slack/consoleslacker"
 )
@@ -28,8 +30,8 @@ func TestConsoleNotify(t *testing.T) {
 
 	output := buf.String()
 
-	if !strings.Contains(output, "Webhook: https://hooks.slack.com/services/xxx") {
-		t.Error("expected output to contain webhook URL")
+	if !strings.Contains(output, "Webhook: [REDACTED]") {
+		t.Error("expected output to contain redacted webhook")
 	}
 	if !strings.Contains(output, "Message: deploy completed") {
 		t.Error("expected output to contain message")
@@ -54,12 +56,25 @@ func TestConsoleNotify_WriterError(t *testing.T) {
 func TestConsoleNotifyAsync(t *testing.T) {
 	t.Parallel()
 
-	var buf bytes.Buffer
-	c := consoleslacker.New(consoleslacker.WithWriter(&buf))
+	r, w := io.Pipe()
+	c := consoleslacker.New(consoleslacker.WithWriter(w))
+
+	done := make(chan string)
+
+	go func() {
+		var buf bytes.Buffer
+
+		_, _ = io.Copy(&buf, r)
+
+		done <- buf.String()
+	}()
 
 	c.NotifyAsync(context.Background(), "https://hooks.slack.com/test", "async msg")
+	time.Sleep(50 * time.Millisecond)
+	w.Close()
 
-	if !strings.Contains(buf.String(), "async msg") {
+	output := <-done
+	if !strings.Contains(output, "async msg") {
 		t.Error("expected output to contain message")
 	}
 }

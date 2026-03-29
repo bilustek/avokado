@@ -15,7 +15,7 @@ func TestNew_DefaultIsDevelopment(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil EmailSender")
 	}
 }
 
@@ -27,7 +27,7 @@ func TestNew_DevelopmentExplicit(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil EmailSender")
 	}
 }
 
@@ -43,7 +43,7 @@ func TestNew_ProductionWithAllOptions(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil EmailSender")
 	}
 }
 
@@ -81,7 +81,7 @@ func TestNew_StagingWithAllOptions(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n == nil {
-		t.Fatal("expected non-nil Notifier")
+		t.Fatal("expected non-nil EmailSender")
 	}
 }
 

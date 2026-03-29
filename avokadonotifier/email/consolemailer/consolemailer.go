@@ -62,9 +62,11 @@ func (s *Console) Send(_ context.Context, request *avokadonotifier.EmailSenderRe
 	return nil
 }
 
-// SendAsync writes the email content to the configured writer without blocking.
+// SendAsync writes the email content to the configured writer in a background goroutine.
 func (s *Console) SendAsync(ctx context.Context, request *avokadonotifier.EmailSenderRequest) {
-	_ = s.Send(ctx, request)
+	go func() {
+		_ = s.Send(ctx, request)
+	}()
 }
 
 // WithWriter overrides the default output destination (os.Stderr).
