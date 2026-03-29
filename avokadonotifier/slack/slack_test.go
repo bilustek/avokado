@@ -1,6 +1,7 @@
 package slack_test
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/bilustek/avokado/avokadonotifier/slack"
@@ -30,11 +31,26 @@ func TestNew_DevelopmentExplicit(t *testing.T) {
 	}
 }
 
-func TestNew_ProductionNotYetSupported(t *testing.T) {
+func TestNew_ProductionWithLogger(t *testing.T) {
+	t.Parallel()
+
+	n, err := slack.New(
+		slack.WithServerEnvironmentName("production"),
+		slack.WithLogger(slog.Default()),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n == nil {
+		t.Fatal("expected non-nil Notifier")
+	}
+}
+
+func TestNew_ProductionWithoutLogger(t *testing.T) {
 	t.Parallel()
 
 	if _, err := slack.New(slack.WithServerEnvironmentName("production")); err == nil {
-		t.Fatal("expected error for non-development environment")
+		t.Fatal("expected error when no logger provided for production")
 	}
 }
 

@@ -1,9 +1,12 @@
 package slack
 
 import (
+	"log/slog"
+
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/slack/consoleslacker"
+	"github.com/bilustek/avokado/avokadonotifier/slack/webhookslacker"
 )
 
 // Option is a functional option for configuring the notifier.
@@ -12,6 +15,7 @@ type Option func(*Notifier) error
 // Notifier is the slack notification hub that delegates to the active SlackNotifier implementation.
 type Notifier struct {
 	serverEnvironmentName string
+	logger                *slog.Logger
 	slacker               avokadonotifier.SlackNotifier
 }
 
@@ -19,6 +23,15 @@ type Notifier struct {
 func WithServerEnvironmentName(serverEnvironmentName string) Option {
 	return func(n *Notifier) error {
 		n.serverEnvironmentName = serverEnvironmentName
+
+		return nil
+	}
+}
+
+// WithLogger sets the logger.
+func WithLogger(logger *slog.Logger) Option {
+	return func(n *Notifier) error {
+		n.logger = logger
 
 		return nil
 	}
@@ -44,8 +57,18 @@ func New(opts ...Option) (*Notifier, error) {
 	case "development":
 		notifier.slacker = consoleslacker.New()
 	default:
-		// TODO: webhookslacker
-		return nil, avokadoerror.New("[avokadonotifier/slack.New] non-development environments not yet supported")
+		if notifier.logger == nil {
+			return nil, avokadoerror.New(
+				"[avokadonotifier/slack.New] logger required for non-development environments, use WithLogger",
+			)
+		}
+
+		slacker, slackerErr := webhookslacker.New(webhookslacker.WithLogger(notifier.logger))
+		if slackerErr != nil {
+			return nil, slackerErr
+		}
+
+		notifier.slacker = slacker
 	}
 
 	return notifier, nil
