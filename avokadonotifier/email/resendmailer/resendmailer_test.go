@@ -10,8 +10,7 @@ import (
 func TestNew_WithoutAPIKey_ReturnsError(t *testing.T) {
 	t.Parallel()
 
-	_, err := resendmailer.New()
-	if err == nil {
+	if _, err := resendmailer.New(); err == nil {
 		t.Fatal("expected error when no API key provided")
 	}
 }
@@ -19,8 +18,7 @@ func TestNew_WithoutAPIKey_ReturnsError(t *testing.T) {
 func TestNew_WithoutLogger_ReturnsError(t *testing.T) {
 	t.Parallel()
 
-	_, err := resendmailer.New(resendmailer.WithAPIKey("re_test_123"))
-	if err == nil {
+	if _, err := resendmailer.New(resendmailer.WithAPIKey("re_test_123")); err == nil {
 		t.Fatal("expected error when no logger provided")
 	}
 }

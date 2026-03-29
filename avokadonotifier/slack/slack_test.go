@@ -33,8 +33,7 @@ func TestNew_DevelopmentExplicit(t *testing.T) {
 func TestNew_ProductionNotYetSupported(t *testing.T) {
 	t.Parallel()
 
-	_, err := slack.New(slack.WithServerEnvironmentName("production"))
-	if err == nil {
+	if _, err := slack.New(slack.WithServerEnvironmentName("production")); err == nil {
 		t.Fatal("expected error for non-development environment")
 	}
 }
@@ -42,8 +41,7 @@ func TestNew_ProductionNotYetSupported(t *testing.T) {
 func TestNew_EmptyServerEnvironmentName(t *testing.T) {
 	t.Parallel()
 
-	_, err := slack.New(slack.WithServerEnvironmentName(""))
-	if err == nil {
+	if _, err := slack.New(slack.WithServerEnvironmentName("")); err == nil {
 		t.Fatal("expected error when serverEnvironmentName is empty")
 	}
 }

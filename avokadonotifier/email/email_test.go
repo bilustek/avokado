@@ -50,11 +50,10 @@ func TestNew_ProductionWithAllOptions(t *testing.T) {
 func TestNew_ProductionWithoutAPIKey(t *testing.T) {
 	t.Parallel()
 
-	_, err := email.New(
+	if _, err := email.New(
 		email.WithServerEnvironmentName("production"),
 		email.WithLogger(slog.Default()),
-	)
-	if err == nil {
+	); err == nil {
 		t.Fatal("expected error when no API key provided for production")
 	}
 }
@@ -62,11 +61,10 @@ func TestNew_ProductionWithoutAPIKey(t *testing.T) {
 func TestNew_ProductionWithoutLogger(t *testing.T) {
 	t.Parallel()
 
-	_, err := email.New(
+	if _, err := email.New(
 		email.WithServerEnvironmentName("production"),
 		email.WithResendAPIKey("re_test_123"),
-	)
-	if err == nil {
+	); err == nil {
 		t.Fatal("expected error when no logger provided for production")
 	}
 }
@@ -90,8 +88,7 @@ func TestNew_StagingWithAllOptions(t *testing.T) {
 func TestNew_EmptyServerEnvironmentName(t *testing.T) {
 	t.Parallel()
 
-	_, err := email.New(email.WithServerEnvironmentName(""))
-	if err == nil {
+	if _, err := email.New(email.WithServerEnvironmentName("")); err == nil {
 		t.Fatal("expected error when serverEnvironmentName is empty")
 	}
 }
