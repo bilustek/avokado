@@ -10,6 +10,9 @@ import (
 	"github.com/bilustek/avokado/avokadonotifier"
 )
 
+// compile-time proof of interface implementation.
+var _ avokadonotifier.EmailSender = (*Console)(nil)
+
 // Option is a functional option for configuring the consolemailer.
 type Option func(*Console)
 
@@ -57,6 +60,11 @@ func (s *Console) Send(_ context.Context, request *avokadonotifier.EmailSenderRe
 	}
 
 	return nil
+}
+
+// SendAsync writes the email content to the configured writer without blocking.
+func (s *Console) SendAsync(ctx context.Context, request *avokadonotifier.EmailSenderRequest) {
+	_ = s.Send(ctx, request)
 }
 
 // WithWriter overrides the default output destination (os.Stderr).

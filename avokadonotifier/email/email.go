@@ -1,6 +1,8 @@
 package email
 
 import (
+	"log/slog"
+
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/email/consolemailer"
@@ -14,6 +16,7 @@ type Option func(*Notifier) error
 type Notifier struct {
 	serverEnvironmentName string
 	resendAPIKey          string
+	logger                *slog.Logger
 	emailer               avokadonotifier.EmailSender
 }
 
@@ -30,6 +33,15 @@ func WithServerEnvironmentName(serverEnvironmentName string) Option {
 func WithResendAPIKey(apiKey string) Option {
 	return func(n *Notifier) error {
 		n.resendAPIKey = apiKey
+
+		return nil
+	}
+}
+
+// WithLogger sets the logger.
+func WithLogger(logger *slog.Logger) Option {
+	return func(n *Notifier) error {
+		n.logger = logger
 
 		return nil
 	}
@@ -58,8 +70,16 @@ func New(opts ...Option) (*Notifier, error) {
 		if notifier.resendAPIKey == "" {
 			return nil, avokadoerror.New("[avokadonotifier.New] resendAPIKey required for non-development environments")
 		}
+		if notifier.logger == nil {
+			return nil, avokadoerror.New(
+				"[avokadonotifier.New] logger required for non-development environments, use WithLogger",
+			)
+		}
 
-		mailer, mailerErr := resendmailer.New(resendmailer.WithAPIKey(notifier.resendAPIKey))
+		mailer, mailerErr := resendmailer.New(
+			resendmailer.WithAPIKey(notifier.resendAPIKey),
+			resendmailer.WithLogger(notifier.logger),
+		)
 		if mailerErr != nil {
 			return nil, mailerErr
 		}

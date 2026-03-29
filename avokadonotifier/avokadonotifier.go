@@ -45,11 +45,13 @@ type EmailSenderRequest struct {
 // EmailSender sends email notifications.
 type EmailSender interface {
 	Send(ctx context.Context, request *EmailSenderRequest) error
+	SendAsync(ctx context.Context, request *EmailSenderRequest)
 }
 
 // SlackNotifier sends Slack notifications.
 type SlackNotifier interface {
 	Notify(ctx context.Context, webhookURL, message string) error
+	NotifyAsync(ctx context.Context, webhookURL, message string)
 }
 
 // EmailSenderRequestToResendRequest converts an EmailSenderRequest into a resend.SendEmailRequest.

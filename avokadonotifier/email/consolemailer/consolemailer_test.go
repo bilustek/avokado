@@ -107,9 +107,3 @@ func TestConsoleSend_WithAttachment(t *testing.T) {
 		t.Error("expected output to contain attachment filename")
 	}
 }
-
-func TestConsoleImplementsEmailSender(t *testing.T) {
-	t.Parallel()
-
-	var _ avokadonotifier.EmailSender = consolemailer.New()
-}
