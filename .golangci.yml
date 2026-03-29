@@ -73,7 +73,7 @@ linters:
           arguments:
             - max-lit-count: "10"
               allow-strs: '"","%w",field'
-              allow-ints: "0,1,2,10,64"
+              allow-ints: "0,1,2,10,64,72"
         - name: max-public-structs
           arguments: [14]
 

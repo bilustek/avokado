@@ -1,0 +1,93 @@
+package consolemailer
+
+import (
+	"context"
+	"io"
+	"os"
+	"strings"
+
+	"github.com/bilustek/avokado/avokadoerror"
+	"github.com/bilustek/avokado/avokadonotifier"
+)
+
+// compile-time proof of interface implementation.
+var _ avokadonotifier.EmailSender = (*Console)(nil)
+
+// Option is a functional option for configuring the consolemailer.
+type Option func(*Console)
+
+// Console is an EmailSender that writes email output to an io.Writer for development use.
+type Console struct {
+	writer io.Writer
+}
+
+// Send writes the email content to the configured writer.
+func (s *Console) Send(_ context.Context, request *avokadonotifier.EmailSenderRequest) error {
+	msg, msgErr := avokadonotifier.EmailSenderRequestToMailMessage(request)
+	if msgErr != nil {
+		return avokadoerror.New("[Console.Send] err").WithErr(msgErr)
+	}
+
+	separator := strings.Repeat("-", 72)
+
+	if _, err := io.WriteString(s.writer, separator+"\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write separator err").WithErr(err)
+	}
+
+	for k, vals := range msg.Header {
+		for _, v := range vals {
+			if _, err := io.WriteString(s.writer, k+": "+v+"\n"); err != nil {
+				return avokadoerror.New("[Console.Send] write header err").WithErr(err)
+			}
+		}
+	}
+
+	if _, err := io.WriteString(s.writer, "\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write newline err").WithErr(err)
+	}
+
+	body, err := io.ReadAll(msg.Body)
+	if err != nil {
+		return avokadoerror.New("[Console.Send] body err").WithErr(err)
+	}
+
+	if _, err := io.WriteString(s.writer, string(body)+"\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write body err").WithErr(err)
+	}
+
+	if _, err := io.WriteString(s.writer, separator+"\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write closing separator err").WithErr(err)
+	}
+
+	return nil
+}
+
+// SendAsync writes the email content to the configured writer in a background goroutine.
+func (s *Console) SendAsync(ctx context.Context, request *avokadonotifier.EmailSenderRequest) {
+	go func() {
+		_ = s.Send(context.WithoutCancel(ctx), request)
+	}()
+}
+
+// WithWriter overrides the default output destination (os.Stderr).
+// If w is nil, the default (os.Stderr) is kept.
+func WithWriter(w io.Writer) Option {
+	return func(c *Console) {
+		if w != nil {
+			c.writer = w
+		}
+	}
+}
+
+// New creates a console email sender with the given options.
+func New(opts ...Option) *Console {
+	cfg := &Console{
+		writer: os.Stderr,
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return cfg
+}
