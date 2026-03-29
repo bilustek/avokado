@@ -3,7 +3,7 @@ package email
 import (
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadonotifier"
-	"github.com/bilustek/avokado/avokadonotifier/email/consolenotifier"
+	"github.com/bilustek/avokado/avokadonotifier/email/consolemailer"
 )
 
 // Option is a functional option for configuring the notifier.
@@ -13,7 +13,6 @@ type Option func(*Notifier) error
 type Notifier struct {
 	serverEnvironmentName string
 	emailer               avokadonotifier.EmailSender
-	slacker               avokadonotifier.SlackNotifier
 }
 
 // WithServerEnvironmentName sets the notifier's server environment.
@@ -29,7 +28,6 @@ func WithServerEnvironmentName(serverEnvironmentName string) Option {
 func New(opts ...Option) (*Notifier, error) {
 	notifier := &Notifier{
 		serverEnvironmentName: "development",
-		slacker:               nil,
 	}
 
 	for _, opt := range opts {
@@ -43,7 +41,7 @@ func New(opts ...Option) (*Notifier, error) {
 	}
 
 	if notifier.serverEnvironmentName == "development" {
-		notifier.emailer = consolenotifier.New()
+		notifier.emailer = consolemailer.New()
 	}
 
 	return notifier, nil

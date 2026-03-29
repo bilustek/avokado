@@ -1,8 +1,7 @@
-package consolenotifier
+package consolemailer
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -11,7 +10,7 @@ import (
 	"github.com/bilustek/avokado/avokadonotifier"
 )
 
-// Option is a functional option for configuring the consolenotifier.
+// Option is a functional option for configuring the consolemailer.
 type Option func(*Console)
 
 // Console ...
@@ -25,20 +24,38 @@ func (s *Console) Send(_ context.Context, request *avokadonotifier.EmailSenderRe
 	if msgErr != nil {
 		return avokadoerror.New("[Console.Send] err").WithErr(msgErr)
 	}
-	fmt.Fprintf(s.writer, "%s\n", strings.Repeat("-", 72))
+
+	separator := strings.Repeat("-", 72)
+
+	if _, err := io.WriteString(s.writer, separator+"\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write separator err").WithErr(err)
+	}
+
 	for k, vals := range msg.Header {
 		for _, v := range vals {
-			fmt.Fprintf(s.writer, "%s: %s\n", k, v)
+			if _, err := io.WriteString(s.writer, k+": "+v+"\n"); err != nil {
+				return avokadoerror.New("[Console.Send] write header err").WithErr(err)
+			}
 		}
 	}
-	fmt.Fprintln(s.writer)
+
+	if _, err := io.WriteString(s.writer, "\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write newline err").WithErr(err)
+	}
 
 	body, err := io.ReadAll(msg.Body)
 	if err != nil {
 		return avokadoerror.New("[Console.Send] body err").WithErr(err)
 	}
-	fmt.Fprintf(s.writer, "%s\n", body)
-	fmt.Fprintf(s.writer, "%s\n", strings.Repeat("-", 72))
+
+	if _, err := io.WriteString(s.writer, string(body)+"\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write body err").WithErr(err)
+	}
+
+	if _, err := io.WriteString(s.writer, separator+"\n"); err != nil {
+		return avokadoerror.New("[Console.Send] write closing separator err").WithErr(err)
+	}
+
 	return nil
 }
 
