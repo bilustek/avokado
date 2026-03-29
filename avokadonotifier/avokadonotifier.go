@@ -14,9 +14,10 @@ import (
 	"time"
 
 	"github.com/bilustek/avokado/avokadoerror"
+	"github.com/resend/resend-go/v3"
 )
 
-// EmailAttachment ...
+// EmailAttachment represents a file to be included with an email message.
 type EmailAttachment struct {
 	Content     []byte
 	Filename    string
@@ -24,10 +25,10 @@ type EmailAttachment struct {
 	ContentType string
 }
 
-// EmailAttachments ...
+// EmailAttachments is a collection of email attachments.
 type EmailAttachments []*EmailAttachment
 
-// EmailSenderRequest ...
+// EmailSenderRequest holds all fields needed to compose and send an email.
 type EmailSenderRequest struct {
 	From        string
 	To          []string
@@ -51,7 +52,44 @@ type SlackNotifier interface {
 	Notify(ctx context.Context, webhookURL, message string) error
 }
 
-// EmailSenderRequestToMailMessage ...
+// EmailSenderRequestToResendRequest converts an EmailSenderRequest into a resend.SendEmailRequest.
+func EmailSenderRequestToResendRequest(request *EmailSenderRequest) *resend.SendEmailRequest {
+	r := &resend.SendEmailRequest{
+		From:    request.From,
+		To:      request.To,
+		Subject: request.Subject,
+		Text:    request.Text,
+	}
+
+	if len(request.Bcc) > 0 {
+		r.Bcc = request.Bcc
+	}
+	if len(request.Cc) > 0 {
+		r.Cc = request.Cc
+	}
+	if request.ReplyTo != "" {
+		r.ReplyTo = request.ReplyTo
+	}
+	if request.HTML != "" {
+		r.Html = request.HTML
+	}
+	if len(request.Headers) > 0 {
+		r.Headers = request.Headers
+	}
+
+	for _, a := range request.Attachments {
+		r.Attachments = append(r.Attachments, &resend.Attachment{
+			Content:     a.Content,
+			Filename:    a.Filename,
+			Path:        a.Path,
+			ContentType: a.ContentType,
+		})
+	}
+
+	return r
+}
+
+// EmailSenderRequestToMailMessage converts an EmailSenderRequest into a standard net/mail.Message.
 func EmailSenderRequestToMailMessage(request *EmailSenderRequest) (*mail.Message, error) {
 	header := make(mail.Header)
 	header["From"] = []string{request.From}

@@ -4,14 +4,16 @@ import (
 	"github.com/bilustek/avokado/avokadoerror"
 	"github.com/bilustek/avokado/avokadonotifier"
 	"github.com/bilustek/avokado/avokadonotifier/email/consolemailer"
+	"github.com/bilustek/avokado/avokadonotifier/email/resendmailer"
 )
 
 // Option is a functional option for configuring the notifier.
 type Option func(*Notifier) error
 
-// Notifier ...
+// Notifier is the email notification hub that delegates to the active EmailSender implementation.
 type Notifier struct {
 	serverEnvironmentName string
+	resendAPIKey          string
 	emailer               avokadonotifier.EmailSender
 }
 
@@ -24,7 +26,16 @@ func WithServerEnvironmentName(serverEnvironmentName string) Option {
 	}
 }
 
-// New ...
+// WithResendAPIKey sets the Resend API key for production email delivery.
+func WithResendAPIKey(apiKey string) Option {
+	return func(n *Notifier) error {
+		n.resendAPIKey = apiKey
+
+		return nil
+	}
+}
+
+// New creates a Notifier configured via functional options.
 func New(opts ...Option) (*Notifier, error) {
 	notifier := &Notifier{
 		serverEnvironmentName: "development",
@@ -40,8 +51,20 @@ func New(opts ...Option) (*Notifier, error) {
 		return nil, avokadoerror.New("[avokadonotifier.New] serverEnvironmentName required")
 	}
 
-	if notifier.serverEnvironmentName == "development" {
+	switch notifier.serverEnvironmentName {
+	case "development":
 		notifier.emailer = consolemailer.New()
+	default:
+		if notifier.resendAPIKey == "" {
+			return nil, avokadoerror.New("[avokadonotifier.New] resendAPIKey required for non-development environments")
+		}
+
+		mailer, mailerErr := resendmailer.New(resendmailer.WithAPIKey(notifier.resendAPIKey))
+		if mailerErr != nil {
+			return nil, mailerErr
+		}
+
+		notifier.emailer = mailer
 	}
 
 	return notifier, nil

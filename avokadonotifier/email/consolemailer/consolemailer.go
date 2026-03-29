@@ -13,12 +13,12 @@ import (
 // Option is a functional option for configuring the consolemailer.
 type Option func(*Console)
 
-// Console ...
+// Console is an EmailSender that writes email output to an io.Writer for development use.
 type Console struct {
 	writer io.Writer
 }
 
-// Send ...
+// Send writes the email content to the configured writer.
 func (s *Console) Send(_ context.Context, request *avokadonotifier.EmailSenderRequest) error {
 	msg, msgErr := avokadonotifier.EmailSenderRequestToMailMessage(request)
 	if msgErr != nil {

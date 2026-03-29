@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bilustek/avokado/avokadonotifier"
+	"github.com/resend/resend-go/v3"
 )
 
 func TestEmailSenderRequestToMailMessage_PlainText(t *testing.T) {
@@ -252,5 +253,124 @@ func TestEmailSenderRequestToMailMessage_MultipleAttachments(t *testing.T) {
 	}
 	if !strings.Contains(bodyStr, "image/png") {
 		t.Error("expected body to contain second attachment content type")
+	}
+}
+
+func TestEmailSenderRequestToResendRequest_AllFields(t *testing.T) {
+	t.Parallel()
+
+	request := &avokadonotifier.EmailSenderRequest{
+		From:    "sender@example.com",
+		To:      []string{"a@example.com", "b@example.com"},
+		Subject: "Resend Test",
+		Bcc:     []string{"bcc@example.com"},
+		Cc:      []string{"cc@example.com"},
+		ReplyTo: "reply@example.com",
+		HTML:    "<h1>Hello</h1>",
+		Text:    "Hello",
+		Headers: map[string]string{"X-Custom": "val"},
+		Attachments: avokadonotifier.EmailAttachments{
+			{
+				Content:     []byte("data"),
+				Filename:    "file.txt",
+				Path:        "/tmp/file.txt",
+				ContentType: "text/plain",
+			},
+		},
+	}
+
+	got := avokadonotifier.EmailSenderRequestToResendRequest(request)
+
+	if got.From != "sender@example.com" {
+		t.Errorf("expected From %q, got %q", "sender@example.com", got.From)
+	}
+	if len(got.To) != 2 || got.To[0] != "a@example.com" || got.To[1] != "b@example.com" {
+		t.Errorf("expected To [a@example.com b@example.com], got %v", got.To)
+	}
+	if got.Subject != "Resend Test" {
+		t.Errorf("expected Subject %q, got %q", "Resend Test", got.Subject)
+	}
+	if len(got.Bcc) != 1 || got.Bcc[0] != "bcc@example.com" {
+		t.Errorf("expected Bcc [bcc@example.com], got %v", got.Bcc)
+	}
+	if len(got.Cc) != 1 || got.Cc[0] != "cc@example.com" {
+		t.Errorf("expected Cc [cc@example.com], got %v", got.Cc)
+	}
+	if got.ReplyTo != "reply@example.com" {
+		t.Errorf("expected ReplyTo %q, got %q", "reply@example.com", got.ReplyTo)
+	}
+	if got.Html != "<h1>Hello</h1>" {
+		t.Errorf("expected Html %q, got %q", "<h1>Hello</h1>", got.Html)
+	}
+	if got.Text != "Hello" {
+		t.Errorf("expected Text %q, got %q", "Hello", got.Text)
+	}
+	if got.Headers["X-Custom"] != "val" {
+		t.Errorf("expected Header X-Custom %q, got %q", "val", got.Headers["X-Custom"])
+	}
+	if len(got.Attachments) != 1 {
+		t.Fatalf("expected 1 attachment, got %d", len(got.Attachments))
+	}
+
+	att := got.Attachments[0]
+	if att.Filename != "file.txt" {
+		t.Errorf("expected attachment Filename %q, got %q", "file.txt", att.Filename)
+	}
+	if att.ContentType != "text/plain" {
+		t.Errorf("expected attachment ContentType %q, got %q", "text/plain", att.ContentType)
+	}
+	if att.Path != "/tmp/file.txt" {
+		t.Errorf("expected attachment Path %q, got %q", "/tmp/file.txt", att.Path)
+	}
+	if string(att.Content) != "data" {
+		t.Errorf("expected attachment Content %q, got %q", "data", string(att.Content))
+	}
+}
+
+func TestEmailSenderRequestToResendRequest_OnlyRequiredFields(t *testing.T) {
+	t.Parallel()
+
+	request := &avokadonotifier.EmailSenderRequest{
+		From:    "sender@example.com",
+		To:      []string{"a@example.com"},
+		Subject: "Minimal",
+		Text:    "body",
+	}
+
+	got := avokadonotifier.EmailSenderRequestToResendRequest(request)
+
+	if got.Bcc != nil {
+		t.Errorf("expected nil Bcc, got %v", got.Bcc)
+	}
+	if got.Cc != nil {
+		t.Errorf("expected nil Cc, got %v", got.Cc)
+	}
+	if got.ReplyTo != "" {
+		t.Errorf("expected empty ReplyTo, got %q", got.ReplyTo)
+	}
+	if got.Html != "" {
+		t.Errorf("expected empty Html, got %q", got.Html)
+	}
+	if got.Headers != nil {
+		t.Errorf("expected nil Headers, got %v", got.Headers)
+	}
+	if got.Attachments != nil {
+		t.Errorf("expected nil Attachments, got %v", got.Attachments)
+	}
+}
+
+func TestEmailSenderRequestToResendRequest_ReturnsCorrectType(t *testing.T) {
+	t.Parallel()
+
+	request := &avokadonotifier.EmailSenderRequest{
+		From:    "sender@example.com",
+		To:      []string{"a@example.com"},
+		Subject: "Type Check",
+		Text:    "body",
+	}
+
+	var got *resend.SendEmailRequest = avokadonotifier.EmailSenderRequestToResendRequest(request)
+	if got == nil {
+		t.Fatal("expected non-nil result")
 	}
 }
