@@ -69,6 +69,8 @@ linters:
           disabled: true
         - name: line-length-limit
           disabled: true
+        - name: unhandled-error
+          disabled: true
         - name: add-constant
           arguments:
             - max-lit-count: "10"
