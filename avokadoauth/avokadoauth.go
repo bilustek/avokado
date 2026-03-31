@@ -14,7 +14,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var _ avokadodb.DBModelizer = (*User)(nil)
+var (
+	_ avokadodb.DBModelizer = (*User)(nil)
+	_ avokadodb.DBModelizer = (*BaseUser)(nil)
+)
 
 const csrfTokenBytes = 32
 
@@ -55,6 +58,42 @@ type BaseUser struct {
 	LastLogin     *time.Time `json:"last_login"`
 	Provider      string     `json:"provider"`
 	ProviderID    *string    `json:"provider_id"`
+}
+
+// GetPublicID returns the public UUID for the user, used for API responses.
+func (b BaseUser) GetPublicID() uuid.UUID { return b.UID }
+
+// TableName returns the default table name for BaseUser.
+// Custom types embedding BaseUser should override this method.
+func (BaseUser) TableName() string { return "users" }
+
+// SetPasswordHash sets the user's hashed password.
+func (b *BaseUser) SetPasswordHash(hash string) { b.PasswordHash = hash }
+
+// SetEmailVerified sets the user's email verification status.
+func (b *BaseUser) SetEmailVerified(verified bool) { b.EmailVerified = verified }
+
+// SetLastLogin sets the user's last login time.
+func (b *BaseUser) SetLastLogin(t time.Time) { b.LastLogin = &t }
+
+// UserModelizer extends avokadodb.DBModelizer with authentication-specific methods.
+// Both the default User and custom user types (embedding BaseUser) satisfy this interface.
+type UserModelizer interface {
+	avokadodb.DBModelizer
+
+	GetEmail() string
+	GetPasswordHash() string
+	SetPasswordHash(hash string)
+	GetFirstName() string
+	GetLastName() string
+	GetIsStaff() bool
+	GetIsSuperuser() bool
+	GetIsActive() bool
+	GetEmailVerified() bool
+	SetEmailVerified(verified bool)
+	SetLastLogin(t time.Time)
+	GetProvider() string
+	GetProviderID() *string
 }
 
 // User represents the user model for authentication purposes.
